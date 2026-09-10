@@ -8,3 +8,57 @@ datasource db {
   // THIS ISN'T AN ERROR JUST A WARNING LEAVE IT
   url      = env("DATABASE_URL")
 }
+
+enum UserRole {
+  CONSUMER
+  REVIEWER
+  INSPECTOR
+  ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+}
+
+model User {
+  id String @id @default(cuid())
+
+  clerkUserId String @unique
+
+  name      String?
+  email     String @unique
+  imageUrl  String?
+
+  role   UserRole   @default(CONSUMER)
+  status UserStatus @default(ACTIVE)
+
+  roleChangesMade RoleChangeLog[] @relation("ChangedBy")
+  roleChanges     RoleChangeLog[] @relation("TargetUser")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([role])
+  @@index([status])
+  @@index([createdAt])
+}
+model RoleChangeLog {
+  id String @id @default(cuid())
+
+  userId String
+
+  changedById String
+
+  oldRole UserRole
+  newRole UserRole
+
+  createdAt DateTime @default(now())
+
+  user      User @relation("TargetUser", fields: [userId], references: [id], onDelete: Cascade)
+  changedBy User @relation("ChangedBy", fields: [changedById], references: [id], onDelete: Restrict)
+
+  @@index([userId])
+  @@index([changedById])
+  @@index([createdAt])
+}
