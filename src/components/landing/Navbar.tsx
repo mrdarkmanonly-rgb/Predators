@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Menu,
@@ -139,7 +140,7 @@ function NavLink({
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
-
+  const router = useRouter();
   return (
     <header className="sticky top-0 z-50 border-b border-[#D9E2EC]/80 bg-white/90 backdrop-blur-xl">
       {/* Continuous atmosphere */}
@@ -266,6 +267,7 @@ export default function Navbar() {
           {/* Scan button */}
           <motion.button
             type="button"
+            onClick={() => router.push("/scan")} 
             whileHover={{
               y: -2,
             }}
@@ -384,6 +386,10 @@ export default function Navbar() {
 
                 <button
                   type="button"
+                  onClick={() => {
+                    setOpen(false);
+                    router.push("/scan");
+                  }}
                   className="col-span-2 flex items-center justify-center gap-2 rounded-xl bg-[#1769AA] px-4 py-3 text-sm font-semibold text-white shadow-[0_6px_18px_rgba(23,105,170,0.15)]"
                 >
                   <ScanLine className="h-4 w-4" />

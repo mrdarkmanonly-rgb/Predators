@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { motion, type Variants } from "framer-motion";
 import {
   ScanLine,
@@ -55,6 +56,7 @@ const item: Variants = {
 };
 
 export default function Hero() {
+  const router = useRouter(); 
   return (
     <section
       id="home"
@@ -149,6 +151,7 @@ export default function Hero() {
           >
             <motion.button
               type="button"
+              onClick={() => router.push("/scan")} 
               whileHover={{
                 y: -3,
                 boxShadow: "0 14px 30px rgba(23,105,170,0.20)",

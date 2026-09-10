@@ -257,7 +257,7 @@ export default function Footer() {
           </div>
 
           <a
-            href="#scan"
+            href="/scan"
             className="group inline-flex items-center gap-2 rounded-lg bg-[#1769AA] px-4 py-2.5 text-xs font-semibold text-white transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#1769AA]/90 hover:shadow-[0_8px_25px_rgba(23,105,170,0.25)]"
           >
             Scan a Product

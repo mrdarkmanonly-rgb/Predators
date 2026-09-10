@@ -3,14 +3,19 @@ import { NextResponse } from "next/server";
 
 const isPublicRoute = createRouteMatcher([
   "/",
+  "/scan(.*)",
   "/login(.*)",
   "/register(.*)",
+
+  // Guest scanner APIs
+  "/api/scans/context",
+  "/api/scans/analyze",
+  "/api/scans/analyze-edited",
 ]);
 
 export default clerkMiddleware(async (auth, req) => {
   const { userId } = await auth();
 
-  // Protected route + user not logged in
   if (!isPublicRoute(req) && !userId) {
     return NextResponse.redirect(new URL("/login", req.url));
   }
