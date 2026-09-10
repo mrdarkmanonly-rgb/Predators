@@ -10,6 +10,9 @@ import {
   ShieldCheck,
   Users,
   Sparkles,
+  ArrowRight,
+  ScanSearch,
+  Cpu,
 } from "lucide-react";
 
 const RESULT_ROWS = [
@@ -30,8 +33,8 @@ const container: Variants = {
   hidden: {},
   show: {
     transition: {
-      staggerChildren: 0.12,
-      delayChildren: 0.1,
+      staggerChildren: 0.1,
+      delayChildren: 0.15,
     },
   },
 };
@@ -39,13 +42,13 @@ const container: Variants = {
 const item: Variants = {
   hidden: {
     opacity: 0,
-    y: 16,
+    y: 24,
   },
   show: {
     opacity: 1,
     y: 0,
     transition: {
-      duration: 0.5,
+      duration: 0.65,
       ease: "easeOut",
     },
   },
@@ -53,103 +56,201 @@ const item: Variants = {
 
 export default function Hero() {
   return (
-    <section id="home" className="bg-bg">
-      <div className="mx-auto grid max-w-7xl grid-cols-1 items-center gap-12 px-4 pb-16 pt-12 sm:px-6 lg:grid-cols-2 lg:gap-16 lg:px-8 lg:pb-24 lg:pt-20">
-        {/* Left: copy */}
+    <section
+      id="home"
+      className="relative isolate overflow-hidden bg-[#F7FAFC]"
+    >
+      {/* Background atmosphere */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 -z-10 overflow-hidden"
+      >
+        <div className="absolute -left-40 -top-40 h-[28rem] w-[28rem] rounded-full bg-[#1769AA]/5 blur-3xl" />
+
+        <div className="absolute -bottom-40 -right-40 h-[30rem] w-[30rem] rounded-full bg-[#16A34A]/5 blur-3xl" />
+
+        <div
+          className="absolute inset-0 opacity-[0.035]"
+          style={{
+            backgroundImage:
+              "linear-gradient(#0B1F33 1px, transparent 1px), linear-gradient(90deg, #0B1F33 1px, transparent 1px)",
+            backgroundSize: "42px 42px",
+          }}
+        />
+      </div>
+
+      <div className="mx-auto grid min-h-[calc(100dvh-4rem)] max-w-7xl grid-cols-1 items-center gap-12 px-5 py-12 sm:px-6 lg:grid-cols-2 lg:gap-16 lg:px-8 lg:py-16">
+        {/* ================= LEFT ================= */}
         <motion.div
           variants={container}
           initial="hidden"
           animate="show"
-          className="max-w-xl"
+          className="max-w-2xl"
         >
-          <motion.span
-            variants={item}
-            className="inline-block rounded-full bg-trust-light px-3 py-1 text-xs font-semibold text-trust"
-          >
-            For a Safer, Fairer Marketplace
-          </motion.span>
+          {/* Eyebrow */}
+          <motion.div variants={item}>
+            <div className="inline-flex items-center gap-2 rounded-full border border-[#1769AA]/15 bg-[#EAF4FF] px-3.5 py-1.5">
+              <motion.span
+                animate={{
+                  scale: [1, 1.35, 1],
+                  opacity: [0.7, 1, 0.7],
+                }}
+                transition={{
+                  duration: 2,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                }}
+                className="h-1.5 w-1.5 rounded-full bg-[#16A34A]"
+              />
 
+              <span className="text-xs font-semibold tracking-wide text-[#1769AA]">
+                LEGAL METROLOGY • AI COMPLIANCE
+              </span>
+            </div>
+          </motion.div>
+
+          {/* Heading */}
           <motion.h1
             variants={item}
-            className="mt-5 text-4xl font-bold leading-[1.1] tracking-tight text-navy sm:text-5xl"
+            className="mt-6 text-4xl font-bold leading-[1.06] tracking-[-0.035em] text-[#0B1F33] sm:text-5xl lg:text-[4.25rem]"
           >
-            Know What You Buy.
+            Know What
             <br />
-            <span className="text-success">Check It Right.</span>
+            You Buy.
+            <br />
+            <span className="relative inline-block text-[#16A34A]">
+              Check It Right.
+              <motion.span
+                initial={{ width: 0 }}
+                animate={{ width: "100%" }}
+                transition={{
+                  delay: 1,
+                  duration: 0.8,
+                  ease: "easeOut",
+                }}
+                className="absolute -bottom-1 left-0 h-1 rounded-full bg-[#16A34A]/20"
+              />
+            </span>
           </motion.h1>
 
+          {/* Description */}
           <motion.p
             variants={item}
-            className="mt-5 text-lg leading-relaxed text-muted"
+            className="mt-6 max-w-xl text-base leading-7 text-[#627D98] sm:text-lg"
           >
-            Scan packaged products and instantly check their mandatory
-            declarations against Legal Metrology requirements.
+            Scan packaged products and instantly verify mandatory declarations
+            against Legal Metrology requirements — powered by AI and OCR.
           </motion.p>
 
+          {/* Buttons */}
           <motion.div
             variants={item}
             className="mt-8 flex flex-col gap-3 sm:flex-row"
           >
-            <button
+            <motion.button
               type="button"
-              className="flex items-center justify-center gap-2 rounded-lg bg-trust px-6 py-3.5 text-sm font-semibold text-white shadow-sm transition-transform hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
+              whileHover={{
+                y: -3,
+                boxShadow: "0 14px 30px rgba(23,105,170,0.20)",
+              }}
+              whileTap={{ scale: 0.97 }}
+              className="group inline-flex items-center justify-center gap-2.5 rounded-xl bg-[#1769AA] px-6 py-3.5 text-sm font-semibold text-white shadow-lg shadow-[#1769AA]/10"
             >
               <ScanLine className="h-[18px] w-[18px]" />
-              Scan a Product
-            </button>
 
-            <a
+              Scan a Product
+
+              <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
+            </motion.button>
+
+            <motion.a
               href="#how-it-works"
-              className="flex items-center justify-center gap-2 rounded-lg border border-line bg-surface px-6 py-3.5 text-sm font-semibold text-navy transition-colors hover:border-trust hover:text-trust"
+              whileHover={{ y: -3 }}
+              whileTap={{ scale: 0.97 }}
+              className="inline-flex items-center justify-center gap-2.5 rounded-xl border border-[#D9E2EC] bg-white px-6 py-3.5 text-sm font-semibold text-[#0B1F33] shadow-sm transition-colors duration-300 hover:border-[#1769AA]/40 hover:text-[#1769AA]"
             >
               <PlayCircle className="h-[18px] w-[18px]" />
               Learn How It Works
-            </a>
+            </motion.a>
           </motion.div>
 
           {/* Trust strip */}
           <motion.div
             variants={item}
-            className="mt-10 grid grid-cols-1 gap-4 border-t border-line pt-6 sm:grid-cols-3"
+            className="mt-10 grid grid-cols-1 gap-4 border-t border-[#D9E2EC] pt-6 sm:grid-cols-3"
           >
-            {TRUST_ITEMS.map(({ icon: Icon, label }) => (
-              <div key={label} className="flex items-center gap-2.5">
-                <Icon className="h-5 w-5 shrink-0 text-success" />
-                <span className="text-sm font-medium text-ink">
+            {TRUST_ITEMS.map(({ icon: Icon, label }, index) => (
+              <motion.div
+                key={label}
+                whileHover={{ y: -3 }}
+                transition={{ duration: 0.2 }}
+                className="group flex items-center gap-2.5"
+              >
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#EAF4FF] transition-colors duration-300 group-hover:bg-[#1769AA]/10">
+                  <Icon className="h-[18px] w-[18px] text-[#16A34A]" />
+                </div>
+
+                <span className="text-xs font-semibold text-[#102A43] sm:text-sm">
                   {label}
                 </span>
-              </div>
+              </motion.div>
             ))}
           </motion.div>
         </motion.div>
 
-        {/* Right: scan visual */}
+        {/* ================= RIGHT ================= */}
         <motion.div
-          initial={{ opacity: 0, scale: 0.94, y: 20 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
+          initial={{ opacity: 0, scale: 0.94, x: 30 }}
+          animate={{ opacity: 1, scale: 1, x: 0 }}
           transition={{
-            duration: 0.6,
+            duration: 0.8,
             ease: "easeOut",
-            delay: 0.2,
+            delay: 0.25,
           }}
-          className="relative mx-auto w-full max-w-sm lg:max-w-md"
+          className="relative mx-auto w-full max-w-md"
         >
-          {/* Flow label */}
-          <div className="mb-4 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-xs font-medium text-muted">
+          {/* Floating scan status */}
+          <motion.div
+            initial={{ opacity: 0, y: -15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.9, duration: 0.5 }}
+            className="absolute -right-3 -top-5 z-20 hidden rounded-xl border border-[#D9E2EC] bg-white/95 px-3.5 py-2.5 shadow-xl backdrop-blur sm:block"
+          >
+            <div className="flex items-center gap-2">
+              <span className="relative flex h-2 w-2">
+                <motion.span
+                  animate={{ scale: [1, 1.8, 1], opacity: [1, 0, 1] }}
+                  transition={{
+                    duration: 1.8,
+                    repeat: Infinity,
+                  }}
+                  className="absolute inset-0 rounded-full bg-[#16A34A]"
+                />
+                <span className="relative h-2 w-2 rounded-full bg-[#16A34A]" />
+              </span>
+
+              <span className="text-[11px] font-bold tracking-wide text-[#102A43]">
+                AI SCANNER READY
+              </span>
+            </div>
+          </motion.div>
+
+          {/* Flow */}
+          <div className="mb-5 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-[10px] font-semibold uppercase tracking-wide text-[#627D98] sm:text-xs">
             <span>Product</span>
-            <span className="text-trust">→</span>
+            <ArrowRight className="h-3 w-3 text-[#1769AA]" />
             <span>Scan</span>
-            <span className="text-trust">→</span>
+            <ArrowRight className="h-3 w-3 text-[#1769AA]" />
             <span>AI + OCR</span>
-            <span className="text-trust">→</span>
+            <ArrowRight className="h-3 w-3 text-[#1769AA]" />
             <span>Check</span>
-            <span className="text-trust">→</span>
-            <span className="text-navy">Result</span>
+            <ArrowRight className="h-3 w-3 text-[#1769AA]" />
+            <span className="text-[#0B1F33]">Result</span>
           </div>
 
-          {/* Photo composition: product + phone scanning it */}
-          <div className="relative aspect-[4/5] w-full overflow-hidden rounded-3xl border border-line bg-trust-light shadow-xl shadow-navy/5">
-            {/* Base photo: the packaged product being scanned */}
+          {/* Main visual */}
+          <div className="relative aspect-[4/5] w-full overflow-hidden rounded-[2rem] border border-[#D9E2EC] bg-[#EAF4FF] shadow-2xl shadow-[#0B1F33]/10">
+            {/* Image */}
             <Image
               src="/images/hero-product.png"
               alt="Packaged product being scanned for compliance"
@@ -159,8 +260,58 @@ export default function Hero() {
               priority
             />
 
-            {/* Foreground photo: phone/camera scanning the label */}
-            <div className="absolute bottom-4 right-4 h-32 w-24 overflow-hidden rounded-2xl border-4 border-white shadow-lg sm:h-40 sm:w-28">
+            {/* Image overlay */}
+            <div className="absolute inset-0 bg-gradient-to-t from-[#0B1F33]/25 via-transparent to-transparent" />
+
+            {/* Scanning beam */}
+            <motion.div
+              initial={{ top: "8%" }}
+              animate={{ top: ["8%", "88%", "8%"] }}
+              transition={{
+                duration: 3.5,
+                repeat: Infinity,
+                ease: "easeInOut",
+              }}
+              className="absolute left-5 right-5 z-10 h-px bg-[#16A34A] shadow-[0_0_12px_rgba(22,163,74,0.7)]"
+            />
+
+            {/* Scanner corners */}
+            <div className="absolute left-5 top-5 h-8 w-8 border-l-2 border-t-2 border-white/80" />
+            <div className="absolute right-5 top-5 h-8 w-8 border-r-2 border-t-2 border-white/80" />
+            <div className="absolute bottom-5 left-5 h-8 w-8 border-b-2 border-l-2 border-white/80" />
+            <div className="absolute bottom-5 right-5 h-8 w-8 border-b-2 border-r-2 border-white/80" />
+
+            {/* Scan indicator */}
+            <motion.div
+              animate={{
+                opacity: [0.5, 1, 0.5],
+                scale: [0.98, 1.02, 0.98],
+              }}
+              transition={{
+                duration: 2,
+                repeat: Infinity,
+              }}
+              className="absolute right-5 top-5 z-10 flex items-center gap-2 rounded-full border border-white/30 bg-[#0B1F33]/70 px-3 py-1.5 backdrop-blur"
+            >
+              <ScanSearch className="h-3.5 w-3.5 text-white" />
+              <span className="text-[9px] font-bold tracking-widest text-white">
+                SCANNING
+              </span>
+            </motion.div>
+
+            {/* Phone */}
+            <motion.div
+              animate={{
+                y: [0, -7, 0],
+                rotate: [0, 1, 0, -1, 0],
+              }}
+              transition={{
+                duration: 5,
+                repeat: Infinity,
+                ease: "easeInOut",
+              }}
+              className="absolute bottom-4 right-4 h-32 w-24 overflow-hidden rounded-2xl border-4 border-white shadow-2xl sm:h-40 sm:w-28"
+            >
               <Image
                 src="/images/scan-phone.png"
                 alt="Phone camera scanning the product label"
@@ -168,42 +319,89 @@ export default function Hero() {
                 sizes="10rem"
                 className="object-cover"
               />
-            </div>
+            </motion.div>
 
-            {/* Result card overlay */}
-            <div className="absolute bottom-4 left-4 w-[13.5rem] rounded-xl border border-line bg-surface/95 p-4 shadow-lg backdrop-blur sm:w-64">
-              <p className="mb-3 text-sm font-semibold text-navy">
-                Product Compliance
-              </p>
+            {/* Result card */}
+            <motion.div
+              initial={{ opacity: 0, y: 25 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{
+                delay: 1,
+                duration: 0.6,
+              }}
+              className="absolute bottom-4 left-4 z-10 w-[13rem] rounded-2xl border border-[#D9E2EC] bg-white/95 p-4 shadow-2xl backdrop-blur-md sm:w-64"
+            >
+              <div className="mb-3 flex items-center justify-between">
+                <p className="text-sm font-bold text-[#0B1F33]">
+                  Product Compliance
+                </p>
+
+                <Cpu className="h-4 w-4 text-[#1769AA]" />
+              </div>
 
               <ul className="space-y-2">
-                {RESULT_ROWS.map((row) => (
-                  <li
+                {RESULT_ROWS.map((row, index) => (
+                  <motion.li
                     key={row.label}
-                    className="flex items-center justify-between text-sm"
+                    initial={{ opacity: 0, x: -8 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{
+                      delay: 1.15 + index * 0.08,
+                    }}
+                    className="flex items-center justify-between text-xs sm:text-sm"
                   >
-                    <span className="text-ink/80">{row.label}</span>
+                    <span className="text-[#102A43]/80">
+                      {row.label}
+                    </span>
 
                     {row.ok ? (
-                      <CheckCircle2 className="h-[18px] w-[18px] text-success" />
+                      <CheckCircle2 className="h-[17px] w-[17px] text-[#16A34A]" />
                     ) : (
-                      <AlertTriangle className="h-[18px] w-[18px] text-warning" />
+                      <AlertTriangle className="h-[17px] w-[17px] text-[#F59E0B]" />
                     )}
-                  </li>
+                  </motion.li>
                 ))}
               </ul>
 
-              <div className="mt-4 flex items-center justify-between rounded-lg bg-warning/10 px-3 py-2">
-                <span className="text-xs font-medium text-navy">
+              <div className="mt-4 flex items-center justify-between rounded-lg bg-[#F59E0B]/10 px-3 py-2">
+                <span className="text-[10px] font-semibold text-[#0B1F33]">
                   Overall Status
                 </span>
 
-                <span className="text-xs font-bold uppercase tracking-wide text-warning">
+                <span className="text-[10px] font-bold uppercase tracking-wide text-[#F59E0B]">
                   Needs Review
                 </span>
               </div>
-            </div>
+            </motion.div>
           </div>
+
+          {/* Bottom floating badge */}
+          <motion.div
+            animate={{
+              y: [0, -5, 0],
+            }}
+            transition={{
+              duration: 3,
+              repeat: Infinity,
+              ease: "easeInOut",
+            }}
+            className="absolute -bottom-4 right-5 hidden rounded-xl border border-[#D9E2EC] bg-white px-3.5 py-2.5 shadow-xl sm:block"
+          >
+            <div className="flex items-center gap-2.5">
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#EAF4FF]">
+                <ShieldCheck className="h-4 w-4 text-[#16A34A]" />
+              </div>
+
+              <div>
+                <p className="text-[9px] font-semibold uppercase tracking-wider text-[#627D98]">
+                  Compliance Engine
+                </p>
+                <p className="text-xs font-bold text-[#0B1F33]">
+                  Rule Check Active
+                </p>
+              </div>
+            </div>
+          </motion.div>
         </motion.div>
       </div>
     </section>

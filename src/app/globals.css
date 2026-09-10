@@ -5,8 +5,8 @@
 @custom-variant dark (&:is(.dark *));
 :root {
   /* Official CheckItRight palette */
-  --background: #F7FAFC;
-  --foreground: #102A43;
+  --background: #f7fafc;
+  --foreground: #102a43;
 }
 
 @theme inline {
@@ -191,21 +191,7 @@
     @apply font-sans;
   }
 
-  /* Brand */
-  --color-navy: #0B1F33;
-  --color-trust: #1769AA;
-  --color-trust-light: #EAF4FF;
-
-  /* Status */
-  --color-success: #16A34A;
-  --color-warning: #F59E0B;
-  --color-danger: #DC2626;
-
-  /* Surfaces / text */
-  --color-surface: #FFFFFF;
-  --color-ink: #102A43;
-  --color-muted: #627D98;
-  --color-line: #D9E2EC;
+  
 }
 
 body {
