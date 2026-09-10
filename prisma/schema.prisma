@@ -1,0 +1,10 @@
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  // THIS ISN'T AN ERROR JUST A WARNING LEAVE IT
+  url      = env("DATABASE_URL")
+}
