@@ -4,6 +4,7 @@ import type {
   OCRScanResult,
 } from "./types";
 import type { ScanImage } from "@/lib/scanning/types";
+import sharp from "sharp";
 
 const OCR_SPACE_ENDPOINT = "https://api.ocr.space/parse/image";
 const DEFAULT_GEMINI_MODEL = "gemini-2.5-flash";
@@ -152,15 +153,41 @@ async function runOCRSpace(
   image: ScanImage,
   apiKey: string,
 ): Promise<OCRImageResult> {
-  const bytes = Buffer.from(await image.file.arrayBuffer());
-  const base64Image = bytes.toString("base64");
+  const originalBytes = Buffer.from(
+    await image.file.arrayBuffer(),
+  );
+
+  // Resize and compress the image before sending it to OCR.space.
+  // This helps prevent HTTP 413 "Payload Too Large" errors.
+  const processedBytes = await sharp(originalBytes)
+    .rotate()
+    .resize({
+      width: 1800,
+      height: 1800,
+      fit: "inside",
+      withoutEnlargement: true,
+    })
+    .jpeg({
+      quality: 80,
+      mozjpeg: true,
+    })
+    .toBuffer();
+
+  console.log(
+    `OCR image ${image.id}: ${Math.round(originalBytes.length / 1024)} KB → ${Math.round(processedBytes.length / 1024)} KB`,
+  );
+
+  const base64Image = processedBytes.toString("base64");
 
   const formBody = new URLSearchParams();
+
   formBody.append("apikey", apiKey);
+
   formBody.append(
     "base64Image",
-    `data:${image.file.type};base64,${base64Image}`,
+    `data:image/jpeg;base64,${base64Image}`,
   );
+
   formBody.append("language", "eng");
   formBody.append("OCREngine", "2");
   formBody.append("scale", "true");
@@ -212,7 +239,9 @@ async function runOCRSpace(
   }
 
   const parsedResult = data.ParsedResults?.[0];
-  const text = parsedResult?.ParsedText?.trim() || null;
+
+  const text =
+    parsedResult?.ParsedText?.trim() || null;
 
   return {
     imageId: image.id,
@@ -226,7 +255,9 @@ async function runOCRSpace(
     ),
     warnings: text
       ? []
-      : ["OCR.space processed the image but detected no readable text."],
+      : [
+          "OCR.space processed the image but detected no readable text.",
+        ],
   };
 }
 
