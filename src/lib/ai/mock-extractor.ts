@@ -14,6 +14,25 @@ import type {
 
 const DEFAULT_GEMINI_MODEL = "gemini-2.5-flash";
 
+const DEFAULT_OPENROUTER_MODEL = "openai/gpt-oss-20b:free";
+
+// Removed "openrouter/free". That's a wildcard/auto-router alias, not a
+// specific model — OpenRouter can route it to ANY free model, including
+// safety/moderation-classifier models that were never meant to do
+// structured JSON extraction. That's what produced the
+// `"User Safety: safe"` garbage response instead of JSON. Only concrete,
+// known-suitable instruct models belong in this list.
+const DEFAULT_OPENROUTER_FALLBACK_MODELS = [
+  "openai/gpt-oss-20b:free",
+  "google/gemma-4-31b-it:free",
+];
+
+const DEFAULT_GEMINI_FALLBACK_MODELS = [
+  "gemini-3.8-flash",
+  "gemini-3.7-flash",
+  "gemini-3.5-flash-lite",
+];
+
 const PRODUCT_FIELDS: Array<keyof ProductLabelData> = [
   "productName",
   "brandName",
@@ -49,15 +68,6 @@ type OCRSource = {
 export async function runMockExtraction(
   ocrResult: OCRScanResult,
 ): Promise<AIExtractionResult> {
-  const apiKey = process.env.GEMINI_API_KEY;
-
-  if (!apiKey) {
-    return createFallbackResult(
-      ocrResult,
-      "Gemini AI is not configured. Product fields were extracted from OCR evidence.",
-    );
-  }
-
   const usableSources = getUsableOCRSources(ocrResult);
 
   if (usableSources.length === 0) {
@@ -79,33 +89,426 @@ export async function runMockExtraction(
     )
     .join("\n\n--- NEXT IMAGE ---\n\n");
 
-  try {
-    const geminiResult = await extractWithGemini(
-      combinedText,
-      usableSources,
-      apiKey,
-    );
+  const geminiKey = process.env.GEMINI_API_KEY?.trim();
+  const openRouterKey =
+    process.env.OPENROUTER_API_KEY?.trim();
 
-    const detectedCount = countDetectedFields(geminiResult.product);
+  let openRouterError: string | null = null;
 
-    if (detectedCount > 0) {
-      return geminiResult;
+  // Primary provider: OpenRouter using the exact requested model.
+  // The model is text-only, so it receives OCR text and never raw image bytes.
+  if (openRouterKey) {
+    try {
+      const openRouterResult =
+        await extractWithOpenRouter(
+          combinedText,
+          usableSources,
+          openRouterKey,
+        );
+
+      const detectedCount = countDetectedFields(
+        openRouterResult.product,
+      );
+
+      if (detectedCount > 0) {
+        return openRouterResult;
+      }
+
+      openRouterError =
+        "OpenRouter returned no usable product fields.";
+
+      console.warn(
+        "OpenRouter returned no usable product fields. Trying Gemini fallback.",
+      );
+    } catch (error) {
+      openRouterError =
+        error instanceof Error
+          ? error.message
+          : "Unknown OpenRouter extraction error.";
+
+      console.warn(
+        "OpenRouter extraction failed. Trying Gemini fallback.",
+        error,
+      );
     }
-
-    console.warn(
-      "Gemini returned no usable product fields. Using OCR fallback.",
-    );
-  } catch (error) {
-    console.warn(
-      "Gemini extraction failed. Using OCR field extraction fallback.",
-      error,
-    );
   }
 
+  // Optional secondary provider. This keeps existing Gemini support without
+  // making it the primary AI provider.
+  if (geminiKey) {
+    try {
+      const geminiResult = await extractWithGemini(
+        combinedText,
+        usableSources,
+        geminiKey,
+      );
+
+      const detectedCount = countDetectedFields(
+        geminiResult.product,
+      );
+
+      if (detectedCount > 0) {
+        return {
+          ...geminiResult,
+          warnings: [
+            ...(openRouterError
+              ? [
+                  `OpenRouter was unavailable; Gemini fallback was used: ${openRouterError}`,
+                ]
+              : []),
+            ...geminiResult.warnings,
+          ],
+        };
+      }
+
+      return createFallbackResult(
+        ocrResult,
+        [
+          ...(openRouterError
+            ? [`OpenRouter failed: ${openRouterError}`]
+            : []),
+          "Gemini returned no usable product fields.",
+          ...geminiResult.warnings,
+          "AI providers did not return usable structured data. Fields were extracted directly from OCR evidence and should be reviewed.",
+        ].join(" "),
+      );
+    } catch (error) {
+      const geminiError =
+        error instanceof Error
+          ? error.message
+          : "Unknown Gemini extraction error.";
+
+      console.error(
+        "GEMINI EXTRACTION ERROR:",
+        error,
+      );
+
+      return createFallbackResult(
+        ocrResult,
+        [
+          ...(openRouterError
+            ? [`OpenRouter failed: ${openRouterError}`]
+            : []),
+          `Gemini failed: ${geminiError}`,
+          "AI structured extraction was unavailable. Fields were extracted directly from OCR evidence and should be reviewed.",
+        ].join(" "),
+      );
+    }
+  }
+
+  // No cloud AI provider configured/available: preserve deterministic OCR
+  // extraction so the scan remains usable.
   return createFallbackResult(
     ocrResult,
-    "AI structured extraction was unavailable. Fields were extracted directly from OCR evidence and should be reviewed.",
+    openRouterError
+      ? `OpenRouter extraction was unavailable (${openRouterError}). Fields were extracted directly from OCR evidence and should be reviewed.`
+      : "No AI extraction provider is configured. Fields were extracted directly from OCR evidence and should be reviewed.",
   );
+}
+
+async function extractWithOpenRouter(
+  combinedText: string,
+  sources: OCRSource[],
+  apiKey: string,
+): Promise<AIExtractionResult> {
+  const configuredModel =
+    process.env.OPENROUTER_MODEL?.trim() ||
+    DEFAULT_OPENROUTER_MODEL;
+
+  const fallbackModels = Array.from(
+    new Set([
+      configuredModel,
+      ...DEFAULT_OPENROUTER_FALLBACK_MODELS,
+    ]),
+  );
+
+  const controller = new AbortController();
+  const timeout = setTimeout(
+    () => controller.abort(),
+    45_000,
+  );
+
+  const prompt = `
+You are the structured product-label extraction layer for CheckItRight.
+
+Extract packaged-product label information ONLY from the supplied OCR evidence.
+
+IMPORTANT RULES:
+1. Use ONLY information explicitly present in the OCR text.
+2. Never invent missing information.
+3. Never guess a value.
+4. If a field is not present, return null for value, rawValue, confidence, and sourceImageId.
+5. Preserve the original wording in rawValue.
+6. value may contain a lightly normalized version of rawValue.
+7. Confidence must be between 0 and 1.
+8. sourceImageId MUST be one of the IMAGE_ID values supplied below.
+9. Never create an image ID.
+10. Do not make legal compliance decisions.
+11. Do not say whether a declaration is legally required.
+12. Return ONLY valid JSON.
+13. Do not wrap the JSON in markdown fences.
+14. Every non-null field must be supported by the OCR evidence.
+15. If the evidence is ambiguous, use a lower confidence instead of guessing.
+
+Available image IDs:
+${sources
+  .map(
+    (source) =>
+      `- ${source.imageId} (${source.imageType})`,
+  )
+  .join("\n")}
+
+Return exactly this JSON shape:
+
+{
+  "productName": {
+    "value": null,
+    "rawValue": null,
+    "confidence": null,
+    "sourceImageId": null
+  },
+  "brandName": {
+    "value": null,
+    "rawValue": null,
+    "confidence": null,
+    "sourceImageId": null
+  },
+  "manufacturer": {
+    "value": null,
+    "rawValue": null,
+    "confidence": null,
+    "sourceImageId": null
+  },
+  "packer": {
+    "value": null,
+    "rawValue": null,
+    "confidence": null,
+    "sourceImageId": null
+  },
+  "importer": {
+    "value": null,
+    "rawValue": null,
+    "confidence": null,
+    "sourceImageId": null
+  },
+  "netQuantity": {
+    "value": null,
+    "rawValue": null,
+    "confidence": null,
+    "sourceImageId": null
+  },
+  "mrp": {
+    "value": null,
+    "rawValue": null,
+    "confidence": null,
+    "sourceImageId": null
+  },
+  "manufacturingDate": {
+    "value": null,
+    "rawValue": null,
+    "confidence": null,
+    "sourceImageId": null
+  },
+  "expiryDate": {
+    "value": null,
+    "rawValue": null,
+    "confidence": null,
+    "sourceImageId": null
+  },
+  "consumerCare": {
+    "value": null,
+    "rawValue": null,
+    "confidence": null,
+    "sourceImageId": null
+  },
+  "countryOfOrigin": {
+    "value": null,
+    "rawValue": null,
+    "confidence": null,
+    "sourceImageId": null
+  },
+  "batchNumber": {
+    "value": null,
+    "rawValue": null,
+    "confidence": null,
+    "sourceImageId": null
+  }
+}
+
+OCR TEXT:
+${combinedText}
+`.trim();
+
+  try {
+    const response = await fetch(
+      "https://openrouter.ai/api/v1/chat/completions",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
+          ...(process.env.OPENROUTER_SITE_URL
+            ? {
+                "HTTP-Referer":
+                  process.env.OPENROUTER_SITE_URL,
+              }
+            : {}),
+          "X-Title":
+            process.env.OPENROUTER_APP_NAME ||
+            "CheckItRight",
+        },
+        body: JSON.stringify({
+          model: fallbackModels[0],
+          models: fallbackModels,
+          messages: [
+            {
+              role: "system",
+              content:
+                "You extract structured product-label information from OCR evidence. Do not invent values and do not make legal compliance decisions. Return only valid JSON.",
+            },
+            {
+              role: "user",
+              content: prompt,
+            },
+          ],
+          temperature: 0,
+          max_tokens: 4096,
+        }),
+        signal: controller.signal,
+      },
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        data?.error?.message ||
+          `OpenRouter extraction request failed with status ${response.status}.`,
+      );
+    }
+
+    const responseText =
+      extractOpenRouterText(data);
+
+    if (!responseText) {
+      const finishReason =
+        data?.choices?.[0]?.finish_reason;
+
+      const refusal =
+        data?.choices?.[0]?.message?.refusal;
+
+      throw new Error(
+        refusal
+          ? `OpenRouter refused the extraction request: ${String(refusal)}`
+          : finishReason
+            ? `OpenRouter returned no extraction content (finish reason: ${String(finishReason)}).`
+            : "OpenRouter returned an empty extraction response.",
+      );
+    }
+
+    const parsed = parseGeminiJSON(responseText);
+
+    if (!parsed || typeof parsed !== "object") {
+      const finishReason =
+        data?.choices?.[0]?.finish_reason;
+
+      const snippet = responseText
+        .slice(0, 300)
+        .replace(/\s+/g, " ")
+        .trim();
+
+      throw new Error(
+        `OpenRouter returned invalid structured extraction data${
+          finishReason ? ` (finish reason: ${finishReason})` : ""
+        }. Response started with: "${snippet}${
+          responseText.length > 300 ? "..." : ""
+        }"`,
+      );
+    }
+
+    const product = mapExtraction(
+      parsed as GeminiExtraction,
+      sources,
+    );
+
+    return {
+      provider: `OpenRouter ${data?.model || fallbackModels[0]}`,
+      status: "LIVE",
+      product,
+      warnings: [],
+      sourceOCRStatus: "LIVE",
+    };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+function extractOpenRouterText(data: any): string | null {
+  const message = data?.choices?.[0]?.message;
+  const content = message?.content;
+
+  if (typeof content === "string") {
+    return content.trim() || null;
+  }
+
+  if (Array.isArray(content)) {
+    const text = content
+      .map((part: any) => {
+        // Reasoning-model responses can include hidden chain-of-thought
+        // parts alongside the final answer. Skip anything explicitly typed
+        // as reasoning so it never gets concatenated into the JSON we parse.
+        if (
+          part?.type === "reasoning" ||
+          part?.type === "thinking"
+        ) {
+          return "";
+        }
+
+        if (typeof part === "string") {
+          return part;
+        }
+
+        if (typeof part?.text === "string") {
+          return part.text;
+        }
+
+        if (
+          typeof part?.content === "string"
+        ) {
+          return part.content;
+        }
+
+        return "";
+      })
+      .filter(Boolean)
+      .join("\n")
+      .trim();
+
+    if (text) {
+      return text;
+    }
+  }
+
+  // Some OpenRouter-compatible responses expose generated text through
+  // output/message-like fields instead of message.content. Support those
+  // variants without treating internal reasoning as extraction output.
+  const alternatives = [
+    message?.output_text,
+    data?.output_text,
+    data?.choices?.[0]?.text,
+  ];
+
+  for (const candidate of alternatives) {
+    if (typeof candidate === "string") {
+      const trimmed = candidate.trim();
+
+      if (trimmed) {
+        return trimmed;
+      }
+    }
+  }
+
+  return null;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -117,12 +520,15 @@ async function extractWithGemini(
   sources: OCRSource[],
   apiKey: string,
 ): Promise<AIExtractionResult> {
-  const model =
+  const configuredModel =
     process.env.GEMINI_MODEL?.trim() || DEFAULT_GEMINI_MODEL;
 
-  const endpoint =
-    `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent` +
-    `?key=${encodeURIComponent(apiKey)}`;
+  const models = Array.from(
+    new Set([
+      configuredModel,
+      ...DEFAULT_GEMINI_FALLBACK_MODELS,
+    ]),
+  );
 
   const prompt = `
 You are extracting structured product-label information from OCR text.
@@ -142,6 +548,8 @@ IMPORTANT RULES:
 11. Do not say whether a declaration is legally required.
 12. Return ONLY valid JSON.
 13. Do not wrap the JSON in markdown fences.
+14. Every non-null field must be supported by the OCR evidence.
+15. If the evidence is ambiguous, use a lower confidence instead of guessing.
 
 Available image IDs:
 
@@ -232,68 +640,116 @@ Return exactly this JSON shape:
 OCR TEXT:
 
 ${combinedText}
-`;
+`.trim();
 
-  const response = await fetch(endpoint, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      contents: [
-        {
-          role: "user",
-          parts: [
+  const errors: string[] = [];
+
+  for (const model of models) {
+    const controller = new AbortController();
+    const timeout = setTimeout(
+      () => controller.abort(),
+      20_000,
+    );
+
+    try {
+      const endpoint =
+        `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent` +
+        `?key=${encodeURIComponent(apiKey)}`;
+
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          contents: [
             {
-              text: prompt,
+              role: "user",
+              parts: [
+                {
+                  text: prompt,
+                },
+              ],
             },
           ],
-        },
-      ],
-      generationConfig: {
-        temperature: 0.1,
-        responseMimeType: "application/json",
-      },
-    }),
-  });
+          generationConfig: {
+            temperature: 0,
+            responseMimeType: "application/json",
+          },
+        }),
+        signal: controller.signal,
+      });
 
-  const data = await response.json();
+      const data = await response.json();
 
-  if (!response.ok) {
-    throw new Error(
-      data?.error?.message ||
-        `Gemini extraction request failed with status ${response.status}.`,
-    );
+      if (!response.ok) {
+        throw new Error(
+          data?.error?.message ||
+            `Gemini extraction request failed with status ${response.status}.`,
+        );
+      }
+
+      const responseText = extractGeminiText(data);
+
+      if (!responseText) {
+        throw new Error(
+          "Gemini returned an empty extraction response.",
+        );
+      }
+
+      const parsed = parseGeminiJSON(responseText);
+
+      if (!parsed || typeof parsed !== "object") {
+        throw new Error(
+          "Gemini returned invalid structured extraction data.",
+        );
+      }
+
+      const product = mapExtraction(
+        parsed as GeminiExtraction,
+        sources,
+      );
+
+      if (countDetectedFields(product) === 0) {
+        throw new Error(
+          "Gemini returned no usable product fields.",
+        );
+      }
+
+      return {
+        provider: `Gemini ${model}`,
+        status: "LIVE",
+        product,
+        warnings:
+          errors.length > 0
+            ? [
+                `Earlier Gemini model attempts failed: ${errors.join(" | ")}`,
+              ]
+            : [],
+        sourceOCRStatus: "LIVE",
+      };
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.name === "AbortError"
+            ? `Gemini ${model} timed out after 20 seconds.`
+            : error.message
+          : `Unknown Gemini error for ${model}.`;
+
+      errors.push(`${model}: ${message}`);
+
+      console.warn(
+        `Gemini extraction failed for model ${model}. Trying next fallback if available.`,
+        error,
+      );
+    } finally {
+      clearTimeout(timeout);
+    }
   }
 
-  const responseText = extractGeminiText(data);
-
-  if (!responseText) {
-    throw new Error(
-      "Gemini returned an empty extraction response.",
-    );
-  }
-
-  const parsed = parseGeminiJSON(responseText);
-
-  if (!parsed || typeof parsed !== "object") {
-    throw new Error(
-      "Gemini returned invalid structured extraction data.",
-    );
-  }
-
-  const product = mapExtraction(
-    parsed as GeminiExtraction,
-    sources,
+  throw new Error(
+    `All Gemini extraction models failed. ${errors.join(" | ")}`,
   );
-
-  return {
-    provider: `Gemini ${model}`,
-    status: "LIVE",
-    product,
-    warnings: [],
-    sourceOCRStatus: "LIVE",
-  };
 }
 
 /* -------------------------------------------------------------------------- */
@@ -328,36 +784,71 @@ function extractGeminiText(data: any): string | null {
 
 function parseGeminiJSON(text: string): unknown {
   const cleaned = text
-    .replace(/^```json\s*/i, "")
-    .replace(/^```\s*/i, "")
-    .replace(/\s*```$/i, "")
+    .replace(/```json/gi, "")
+    .replace(/```/g, "")
     .trim();
 
+  // First try the complete response.
   try {
     return JSON.parse(cleaned);
   } catch {
-    const firstBrace = cleaned.indexOf("{");
-    const lastBrace = cleaned.lastIndexOf("}");
+    // Continue with extraction from surrounding model text.
+  }
 
-    if (
-      firstBrace === -1 ||
-      lastBrace === -1 ||
-      lastBrace <= firstBrace
-    ) {
-      return null;
-    }
+  // Find the first balanced JSON object. This is safer than simply taking
+  // indexOf("{") through lastIndexOf("}") because model text can contain
+  // additional braces after the actual JSON.
+  for (let start = 0; start < cleaned.length; start += 1) {
+    if (cleaned[start] !== "{") continue;
 
-    const jsonCandidate = cleaned.slice(
-      firstBrace,
-      lastBrace + 1,
-    );
+    let depth = 0;
+    let inString = false;
+    let escaped = false;
 
-    try {
-      return JSON.parse(jsonCandidate);
-    } catch {
-      return null;
+    for (let index = start; index < cleaned.length; index += 1) {
+      const character = cleaned[index];
+
+      if (inString) {
+        if (escaped) {
+          escaped = false;
+        } else if (character === "\\") {
+          escaped = true;
+        } else if (character === '"') {
+          inString = false;
+        }
+        continue;
+      }
+
+      if (character === '"') {
+        inString = true;
+        continue;
+      }
+
+      if (character === "{") {
+        depth += 1;
+      } else if (character === "}") {
+        depth -= 1;
+
+        if (depth === 0) {
+          const candidate = cleaned.slice(start, index + 1);
+
+          try {
+            return JSON.parse(candidate);
+          } catch {
+            const repaired = candidate.replace(/,\s*([}\]])/g, "$1");
+
+            try {
+              return JSON.parse(repaired);
+            } catch {
+              break;
+            }
+          }
+        }
+      }
     }
   }
+
+  return null;
 }
 
 /* -------------------------------------------------------------------------- */

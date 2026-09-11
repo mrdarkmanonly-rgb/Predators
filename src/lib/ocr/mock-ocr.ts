@@ -5,36 +5,51 @@ import type {
 } from "./types";
 import type { ScanImage } from "@/lib/scanning/types";
 import sharp from "sharp";
+import { createWorker } from "tesseract.js";
 
 const OCR_SPACE_ENDPOINT = "https://api.ocr.space/parse/image";
-const DEFAULT_GEMINI_MODEL = "gemini-2.5-flash";
+
+// First attempt: enough time for a normal, slightly slow OCR.space call to
+// finish rather than aborting a request that would have succeeded.
+const OCR_REQUEST_TIMEOUT_MS = 30_000;
+
+// Retry attempt (harsher compression, smaller image): if OCR.space hasn't
+// responded in this much less time, it's not worth waiting further before
+// moving on to the local Tesseract fallback.
+const OCR_RETRY_TIMEOUT_MS = 15_000;
 
 /**
  * OCR adapter.
  *
  * Primary provider: OCR.space.
- * Fallback: Gemini Vision transcription when OCR.space returns no usable text.
- * The fallback is still treated as OCR/transcription evidence; structured
- * field extraction remains a separate AI step.
+ * Fallback: local Tesseract.js OCR when OCR.space is unavailable, errors, or
+ * returns no usable text. This intentionally does NOT call out to Gemini
+ * Vision for transcription — that added a second network round trip on top
+ * of OCR.space on every failure, which was the main source of slow scans.
+ * Gemini is still used later, but only as a structured-extraction fallback
+ * that reads the OCR text produced here — never raw image bytes.
  *
  * API keys remain server-side.
  */
 export async function runMockOCR(
   images: ScanImage[],
 ): Promise<OCRScanResult> {
-  const ocrSpaceKey = process.env.OCR_SPACE_API_KEY;
-  const geminiKey = process.env.GEMINI_API_KEY;
+  const ocrSpaceKey = process.env.OCR_SPACE_API_KEY?.trim();
 
   const results: OCRImageResult[] = [];
 
   for (const image of images) {
     let result: OCRImageResult | null = null;
 
+    // 1. Primary: OCR.space.
     if (ocrSpaceKey) {
       try {
         result = await runOCRSpace(image, ocrSpaceKey);
       } catch (error) {
-        console.error(`OCR.SPACE ERROR FOR IMAGE ${image.id}:`, error);
+        console.error(
+          `OCR.SPACE ERROR FOR IMAGE ${image.id}:`,
+          error,
+        );
 
         result = {
           imageId: image.id,
@@ -53,26 +68,27 @@ export async function runMockOCR(
       }
     }
 
-    // OCR.space can return a successful response with no readable text.
-    // In that case, use Gemini Vision as a transcription fallback when available.
-    if (!result?.text?.trim() && geminiKey) {
+    // 2. Local fallback. This does not require an API key and runs whenever
+    // OCR.space is unavailable, not configured, or produced no usable text.
+    if (!result?.text?.trim()) {
       try {
-        const fallback = await runGeminiVisionOCR(
-          image,
-          geminiKey,
-        );
+        const localFallback =
+          await runTesseractOCR(image);
 
-        if (fallback.text?.trim()) {
+        if (localFallback.text?.trim()) {
           result = {
-            ...fallback,
+            ...localFallback,
             warnings: [
               ...(result?.warnings ?? []),
-              "OCR.space returned no usable text; Gemini Vision transcription was used as the OCR fallback.",
+              "Local Tesseract OCR was used as the fallback.",
             ],
           };
         }
       } catch (error) {
-        console.error(`GEMINI VISION OCR ERROR FOR IMAGE ${image.id}:`, error);
+        console.error(
+          `TESSERACT OCR ERROR FOR IMAGE ${image.id}:`,
+          error,
+        );
 
         if (!result) {
           result = {
@@ -88,8 +104,8 @@ export async function runMockOCR(
 
         result.warnings.push(
           error instanceof Error
-            ? `Gemini Vision OCR fallback failed: ${error.message}`
-            : "Gemini Vision OCR fallback failed.",
+            ? `Local Tesseract OCR fallback failed: ${error.message}`
+            : "Local Tesseract OCR fallback failed.",
         );
       }
     }
@@ -103,8 +119,8 @@ export async function runMockOCR(
         confidence: null,
         regions: [],
         warnings: [
-          "No OCR provider is configured.",
-          "Set OCR_SPACE_API_KEY or GEMINI_API_KEY to enable OCR.",
+          "No OCR provider is configured and local OCR was unavailable.",
+          "Set OCR_SPACE_API_KEY to enable cloud OCR.",
         ],
       };
     }
@@ -122,44 +138,91 @@ export async function runMockOCR(
     (result) => result.status === "ERROR",
   );
 
-  const hasConfiguredProvider = Boolean(
-    ocrSpaceKey || geminiKey,
-  );
-
   return {
-    provider: ocrSpaceKey
-      ? geminiKey
-        ? "OCR.space + Gemini Vision fallback"
-        : "OCR.space"
-      : geminiKey
-        ? "Gemini Vision OCR"
-        : "No OCR provider",
+    provider: [
+      ocrSpaceKey ? "OCR.space" : null,
+      "Tesseract.js local fallback",
+    ]
+      .filter(Boolean)
+      .join(" + "),
     status: hasLiveResult
       ? "LIVE"
       : hasError
         ? "ERROR"
-        : hasConfiguredProvider
+        : ocrSpaceKey
           ? "ERROR"
           : "NOT_CONFIGURED",
     images: results,
     warnings: [
       "OCR output is raw text evidence extracted from the supplied product images.",
       "OCR output must not be treated as a legal determination.",
+      "Large images are resized and compressed before OCR.space upload.",
+      "Local Tesseract OCR is used as a fallback when OCR.space does not produce usable text.",
     ],
   };
 }
 
-async function runOCRSpace(
+let tesseractWorkerPromise: ReturnType<
+  typeof createWorker
+> | null = null;
+
+async function getTesseractWorker() {
+  if (!tesseractWorkerPromise) {
+    tesseractWorkerPromise = createWorker("eng");
+  }
+
+  return tesseractWorkerPromise;
+}
+
+async function runTesseractOCR(
   image: ScanImage,
-  apiKey: string,
 ): Promise<OCRImageResult> {
   const originalBytes = Buffer.from(
     await image.file.arrayBuffer(),
   );
 
-  // Resize and compress the image before sending it to OCR.space.
-  // This helps prevent HTTP 413 "Payload Too Large" errors.
-  const processedBytes = await sharp(originalBytes)
+  // Keep the large-file protection here too. Tesseract does not need the
+  // original full-resolution upload to read normal package-label text.
+  const processedBytes = await preprocessForLocalOCR(
+    originalBytes,
+  );
+
+  const worker = await getTesseractWorker();
+
+  const result = await worker.recognize(
+    processedBytes,
+  );
+
+  const text =
+    result.data.text?.trim() || null;
+
+  const confidence =
+    typeof result.data.confidence === "number"
+      ? Math.max(
+          0,
+          Math.min(1, result.data.confidence / 100),
+        )
+      : null;
+
+  return {
+    imageId: image.id,
+    imageType: image.type,
+    status: "LIVE",
+    text,
+    confidence,
+    regions: [],
+    warnings: text
+      ? []
+      : [
+          "Tesseract processed the image but detected no readable text.",
+        ],
+  };
+}
+
+async function preprocessForLocalOCR(
+  originalBytes: Buffer,
+): Promise<Buffer> {
+  return sharp(originalBytes)
     .rotate()
     .resize({
       width: 1800,
@@ -167,16 +230,71 @@ async function runOCRSpace(
       fit: "inside",
       withoutEnlargement: true,
     })
+    .grayscale()
+    .normalize()
     .jpeg({
-      quality: 80,
+      quality: 82,
+      mozjpeg: true,
+    })
+    .toBuffer();
+}
+
+/**
+ * Compresses the source image for OCR.space upload.
+ *
+ * `strength` selects how aggressive the compression is. The retry path uses
+ * "strong" so a second attempt is both smaller and faster to process after a
+ * timeout, without changing the default (first-attempt) quality.
+ */
+async function compressForOCRSpace(
+  originalBytes: Buffer,
+  strength: "default" | "strong",
+): Promise<Buffer> {
+  const targets =
+    strength === "default"
+      ? { width: 1800, height: 1800, quality: 80 }
+      : { width: 1400, height: 1400, quality: 60 };
+
+  let processedBytes = await sharp(originalBytes)
+    .rotate()
+    .resize({
+      width: targets.width,
+      height: targets.height,
+      fit: "inside",
+      withoutEnlargement: true,
+    })
+    .jpeg({
+      quality: targets.quality,
       mozjpeg: true,
     })
     .toBuffer();
 
-  console.log(
-    `OCR image ${image.id}: ${Math.round(originalBytes.length / 1024)} KB → ${Math.round(processedBytes.length / 1024)} KB`,
-  );
+  // Keep the existing large-file fix and make it more defensive. URL-
+  // encoded base64 can be considerably larger than the binary JPEG.
+  if (processedBytes.length > 1_500_000) {
+    processedBytes = await sharp(processedBytes)
+      .resize({
+        width: 1600,
+        height: 1600,
+        fit: "inside",
+        withoutEnlargement: true,
+      })
+      .jpeg({
+        quality: 65,
+        mozjpeg: true,
+      })
+      .toBuffer();
+  }
 
+  return processedBytes;
+}
+
+async function callOCRSpace(
+  image: ScanImage,
+  apiKey: string,
+  processedBytes: Buffer,
+  timeoutMs: number,
+): Promise<OCRImageResult> {
   const base64Image = processedBytes.toString("base64");
 
   const formBody = new URLSearchParams();
@@ -194,15 +312,40 @@ async function runOCRSpace(
   formBody.append("detectOrientation", "true");
   formBody.append("isOverlayRequired", "true");
 
-  const response = await fetch(OCR_SPACE_ENDPOINT, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
-    body: formBody.toString(),
-  });
+  const controller = new AbortController();
+  const timeout = setTimeout(
+    () => controller.abort(),
+    timeoutMs,
+  );
+
+  let response: Response;
+
+  try {
+    response = await fetch(OCR_SPACE_ENDPOINT, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: formBody.toString(),
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timeout);
+  }
 
   if (!response.ok) {
+    if (response.status === 413) {
+      throw new Error(
+        "OCR.space rejected the image as too large (HTTP 413) even after image compression.",
+      );
+    }
+
+    if (response.status >= 500) {
+      throw new Error(
+        `OCR.space is temporarily unavailable (HTTP ${response.status}).`,
+      );
+    }
+
     throw new Error(
       `OCR.space request failed with status ${response.status}.`,
     );
@@ -261,91 +404,62 @@ async function runOCRSpace(
   };
 }
 
-async function runGeminiVisionOCR(
+async function runOCRSpace(
   image: ScanImage,
   apiKey: string,
 ): Promise<OCRImageResult> {
-  const model =
-    process.env.GEMINI_MODEL || DEFAULT_GEMINI_MODEL;
-
-  const bytes = Buffer.from(await image.file.arrayBuffer());
-  const base64Image = bytes.toString("base64");
-
-  const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-goog-api-key": apiKey,
-      },
-      body: JSON.stringify({
-        contents: [
-          {
-            parts: [
-              {
-                text: [
-                  "Transcribe the visible printed text from this packaged-product label.",
-                  "Return only the text that is visibly present in the image.",
-                  "Preserve numbers, punctuation, units, currency symbols and line breaks as accurately as possible.",
-                  "Do not infer missing words or product information.",
-                  "Do not summarize and do not analyze legal compliance.",
-                ].join("\\n"),
-              },
-              {
-                inlineData: {
-                  mimeType: image.file.type || "image/jpeg",
-                  data: base64Image,
-                },
-              },
-            ],
-          },
-        ],
-        generationConfig: {
-          temperature: 0,
-        },
-      }),
-    },
+  const originalBytes = Buffer.from(
+    await image.file.arrayBuffer(),
   );
 
-  const data = (await response.json()) as {
-    candidates?: Array<{
-      content?: {
-        parts?: Array<{
-          text?: string;
-        }>;
-      };
-    }>;
-    error?: {
-      message?: string;
-    };
-  };
+  const processedBytes = await compressForOCRSpace(
+    originalBytes,
+    "default",
+  );
 
-  if (!response.ok) {
-    throw new Error(
-      data.error?.message ||
-        `Gemini Vision OCR request failed with status ${response.status}.`,
+  console.log(
+    `OCR image ${image.id}: ${Math.round(originalBytes.length / 1024)} KB → ${Math.round(processedBytes.length / 1024)} KB`,
+  );
+
+  try {
+    return await callOCRSpace(
+      image,
+      apiKey,
+      processedBytes,
+      OCR_REQUEST_TIMEOUT_MS,
+    );
+  } catch (error) {
+    // Only retry on an actual timeout. A real server error (e.g. OCR.space
+    // returning 5xx, as opposed to us aborting) means retrying against the
+    // same degraded service rarely helps and just delays falling back to
+    // Tesseract, so those are thrown straight through.
+    const isAbort =
+      error instanceof Error && error.name === "AbortError";
+
+    if (!isAbort) {
+      throw error;
+    }
+
+    console.warn(
+      `OCR.space timed out for image ${image.id} after ${OCR_REQUEST_TIMEOUT_MS / 1000}s. Retrying once with stronger compression...`,
+    );
+
+    const retryBytes = await compressForOCRSpace(
+      originalBytes,
+      "strong",
+    );
+
+    console.log(
+      `OCR image ${image.id} retry: ${Math.round(originalBytes.length / 1024)} KB → ${Math.round(retryBytes.length / 1024)} KB`,
+    );
+
+    return await callOCRSpace(
+      image,
+      apiKey,
+      retryBytes,
+      OCR_RETRY_TIMEOUT_MS,
     );
   }
-
-  const text = data.candidates?.[0]?.content?.parts
-    ?.map((part) => part.text ?? "")
-    .join("\n")
-    .trim();
-
-  if (!text) {
-    throw new Error("Gemini Vision OCR returned no readable text.");
-  }
-
-  return {
-    imageId: image.id,
-    imageType: image.type,
-    status: "LIVE",
-    text,
-    confidence: null,
-    regions: [],
-    warnings: [],
-  };
 }
 
 function extractRegions(
