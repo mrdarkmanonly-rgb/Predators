@@ -1,4 +1,7 @@
-export default function ReviewerPage() {
+import { requireRole } from "@/lib/auth-guard";
+
+export default async function ReviewerPage () {
+  const user = await requireRole(["REVIEWER"]);
   return (
     <main>
       <h1>Reviewer Dashboard</h1>

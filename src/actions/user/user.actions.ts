@@ -41,23 +41,17 @@ export async function syncUserWithDatabase() {
         name:
           `${clerkUser.firstName ?? ""} ${clerkUser.lastName ?? ""}`.trim() ||
           null,
-
         email,
-
         imageUrl: clerkUser.imageUrl,
       },
 
       create: {
         clerkUserId: userId,
-
         name:
           `${clerkUser.firstName ?? ""} ${clerkUser.lastName ?? ""}`.trim() ||
           null,
-
         email,
-
         imageUrl: clerkUser.imageUrl,
-
         role: "CONSUMER",
         status: "ACTIVE",
       },
@@ -74,5 +68,29 @@ export async function syncUserWithDatabase() {
       success: false,
       message: "Failed to sync user with database",
     };
+  }
+}
+
+
+
+export async function getCurrentUserFromDatabase() {
+  try {
+    const { userId } = await auth();
+
+    if (!userId) {
+      return null;
+    }
+
+    const user = await prisma.user.findUnique({
+      where: {
+        clerkUserId: userId,
+      },
+    });
+
+    return user;
+  } catch (error) {
+    console.error("GET CURRENT USER ERROR:", error);
+
+    return null;
   }
 }

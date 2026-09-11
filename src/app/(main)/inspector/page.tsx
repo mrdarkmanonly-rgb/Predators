@@ -1,17 +1,10 @@
-"use client";
 
-import React from "react";
+import { requireRole } from "@/lib/auth-guard";
 import Link from "next/link";
-import { useClerk } from "@clerk/nextjs";
 
-export default function InspectorPage() {
-  const { signOut } = useClerk();
-
-  const handleLogout = async () => {
-    await signOut({
-      redirectUrl: "/login",
-    });
-  };
+export default async function InspectorPage() {
+const user = await requireRole(["INSPECTOR"]);
+ 
 
   return (
     <div>
@@ -24,9 +17,7 @@ export default function InspectorPage() {
           </button>
         </Link>
 
-        <button type="button" onClick={handleLogout}>
-          Logout
-        </button>
+       
       </div>
     </div>
   );
