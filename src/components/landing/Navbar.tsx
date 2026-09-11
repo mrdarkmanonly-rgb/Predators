@@ -12,7 +12,7 @@ import {
   ArrowUpRight,
   Sparkles,
 } from "lucide-react";
-
+import { useAuth, UserButton } from "@clerk/nextjs";
 const NAV_LINKS = [
   { label: "Home", href: "#home" },
   { label: "How It Works", href: "#how-it-works" },
@@ -51,6 +51,7 @@ function NavLink({
   label: string;
   href: string;
 }) {
+   
   return (
     <motion.a
       href={href}
@@ -141,6 +142,7 @@ function NavLink({
 export default function Navbar() {
   const [open, setOpen] = useState(false);
   const router = useRouter();
+    const { isLoaded, isSignedIn } = useAuth();
   return (
     <header className="sticky top-0 z-50 border-b border-[#D9E2EC]/80 bg-white/90 backdrop-blur-xl">
       {/* Continuous atmosphere */}
@@ -239,64 +241,98 @@ export default function Navbar() {
           ))}
         </nav>
 
-        {/* Desktop actions */}
-        <div className="hidden items-center gap-3 lg:flex">
-          <Link
-            href="/login"
-            className="group relative px-2 py-2 text-sm font-medium text-[#102A43]/75 transition-colors hover:text-[#1769AA]"
-          >
-            Login
+      {/* Desktop actions */}
+<div className="hidden items-center gap-3 lg:flex">
+  {!isLoaded ? null : isSignedIn ? (
+    <>
+      <Link
+        href="/dashboard"
+        className="group relative px-2 py-2 text-sm font-medium text-[#102A43]/75 transition-colors hover:text-[#1769AA]"
+      >
+        Dashboard
 
-            <span className="absolute bottom-0 left-2 right-2 h-px origin-center scale-x-0 bg-[#16A34A] transition-transform duration-300 group-hover:scale-x-100" />
-          </Link>
+        <span className="absolute bottom-0 left-2 right-2 h-px origin-center scale-x-0 bg-[#16A34A] transition-transform duration-300 group-hover:scale-x-100" />
+      </Link>
+        <UserButton/>
+        
+      <motion.button
+        type="button"
+        onClick={() => router.push("/scan")}
+        whileHover={{ y: -2 }}
+        whileTap={{ y: 0, scale: 0.98 }}
+        className="group relative flex items-center gap-2 overflow-hidden rounded-xl bg-[#1769AA] px-4 py-2 text-sm font-semibold text-white shadow-[0_6px_20px_rgba(23,105,170,0.18)]"
+      >
+        <motion.span
+          initial={{ x: "-120%" }}
+          animate={{ x: "120%" }}
+          transition={{
+            duration: 2.5,
+            repeat: Infinity,
+            repeatDelay: 2,
+            ease: "easeInOut",
+          }}
+          className="absolute inset-y-0 w-1/3 skew-x-12 bg-white/10"
+        />
 
-          <Link
-            href="/register"
-            className="group relative overflow-hidden rounded-xl border border-[#1769AA]/30 bg-white px-4 py-2 text-sm font-semibold text-[#1769AA] transition-all duration-300 hover:-translate-y-0.5 hover:border-[#1769AA]/50 hover:bg-[#EAF4FF] hover:shadow-[0_6px_20px_rgba(23,105,170,0.1)]"
-          >
-            <span className="relative z-10">Register</span>
+        <ScanLine className="relative z-10 h-4 w-4 transition-transform duration-300 group-hover:scale-110" />
 
-            <motion.span
-              initial={{ x: "-120%" }}
-              whileHover={{ x: "120%" }}
-              transition={{ duration: 0.6 }}
-              className="absolute inset-y-0 w-1/3 skew-x-12 bg-white/60"
-            />
-          </Link>
+        <span className="relative z-10">
+          Scan a Product
+        </span>
+      </motion.button>
+    </>
+  ) : (
+    <>
+      <Link
+        href="/login"
+        className="group relative px-2 py-2 text-sm font-medium text-[#102A43]/75 transition-colors hover:text-[#1769AA]"
+      >
+        Login
 
-          {/* Scan button */}
-          <motion.button
-            type="button"
-            onClick={() => router.push("/scan")} 
-            whileHover={{
-              y: -2,
-            }}
-            whileTap={{
-              y: 0,
-              scale: 0.98,
-            }}
-            className="group relative flex items-center gap-2 overflow-hidden rounded-xl bg-[#1769AA] px-4 py-2 text-sm font-semibold text-white shadow-[0_6px_20px_rgba(23,105,170,0.18)]"
-          >
-            {/* Moving highlight */}
-            <motion.span
-              initial={{ x: "-120%" }}
-              animate={{ x: "120%" }}
-              transition={{
-                duration: 2.5,
-                repeat: Infinity,
-                repeatDelay: 2,
-                ease: "easeInOut",
-              }}
-              className="absolute inset-y-0 w-1/3 skew-x-12 bg-white/10"
-            />
+        <span className="absolute bottom-0 left-2 right-2 h-px origin-center scale-x-0 bg-[#16A34A] transition-transform duration-300 group-hover:scale-x-100" />
+      </Link>
 
-            <ScanLine className="relative z-10 h-4 w-4 transition-transform duration-300 group-hover:scale-110" />
+      <Link
+        href="/register"
+        className="group relative overflow-hidden rounded-xl border border-[#1769AA]/30 bg-white px-4 py-2 text-sm font-semibold text-[#1769AA] transition-all duration-300 hover:-translate-y-0.5 hover:border-[#1769AA]/50 hover:bg-[#EAF4FF] hover:shadow-[0_6px_20px_rgba(23,105,170,0.1)]"
+      >
+        <span className="relative z-10">Register</span>
 
-            <span className="relative z-10">
-              Scan a Product
-            </span>
-          </motion.button>
-        </div>
+        <motion.span
+          initial={{ x: "-120%" }}
+          whileHover={{ x: "120%" }}
+          transition={{ duration: 0.6 }}
+          className="absolute inset-y-0 w-1/3 skew-x-12 bg-white/60"
+        />
+      </Link>
+
+      <motion.button
+        type="button"
+        onClick={() => router.push("/scan")}
+        whileHover={{ y: -2 }}
+        whileTap={{ y: 0, scale: 0.98 }}
+        className="group relative flex items-center gap-2 overflow-hidden rounded-xl bg-[#1769AA] px-4 py-2 text-sm font-semibold text-white shadow-[0_6px_20px_rgba(23,105,170,0.18)]"
+      >
+        <motion.span
+          initial={{ x: "-120%" }}
+          animate={{ x: "120%" }}
+          transition={{
+            duration: 2.5,
+            repeat: Infinity,
+            repeatDelay: 2,
+            ease: "easeInOut",
+          }}
+          className="absolute inset-y-0 w-1/3 skew-x-12 bg-white/10"
+        />
+        <ScanLine className="relative z-10 h-4 w-4 transition-transform duration-300 group-hover:scale-110" />
+
+        <span className="relative z-10">
+          Scan a Product
+        </span>
+      </motion.button>
+    </>
+  )}
+</div>
 
         {/* Mobile menu button */}
         <motion.button
