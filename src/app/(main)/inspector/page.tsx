@@ -1,10 +1,9 @@
-
+import LogoutButton from "@/components/global/logout-button";
 import { requireRole } from "@/lib/auth-guard";
 import Link from "next/link";
 
 export default async function InspectorPage() {
-const user = await requireRole(["INSPECTOR"]);
- 
+  const user = await requireRole(["INSPECTOR"]);
 
   return (
     <div>
@@ -12,12 +11,9 @@ const user = await requireRole(["INSPECTOR"]);
 
       <div>
         <Link href="/scan">
-          <button type="button">
-            Scan Product
-          </button>
+          <button type="button">Scan Product</button>
         </Link>
-
-       
+        <LogoutButton />
       </div>
     </div>
   );

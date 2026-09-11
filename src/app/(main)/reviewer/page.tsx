@@ -1,3 +1,4 @@
+import LogoutButton from "@/components/global/logout-button";
 import { requireRole } from "@/lib/auth-guard";
 
 export default async function ReviewerPage () {
@@ -6,6 +7,7 @@ export default async function ReviewerPage () {
     <main>
       <h1>Reviewer Dashboard</h1>
       <p>Reviewer dashboard coming soon.</p>
+      <LogoutButton />
     </main>
   );
 }
