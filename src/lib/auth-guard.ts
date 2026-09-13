@@ -26,3 +26,14 @@ export async function requireRole(allowedRoles: UserRole[]) {
 
   return user;
 }
+
+export async function getCurrentUser() {
+  const { userId } = await auth();
+  if (!userId) return null;
+
+  const user = await prisma.user.findUnique({
+    where: { clerkUserId: userId },
+  });
+
+  return user;
+}

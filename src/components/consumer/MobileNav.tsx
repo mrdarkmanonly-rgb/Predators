@@ -12,11 +12,11 @@ import {
 } from "lucide-react";
 
 const items = [
-  { href: "/user", label: "Home", icon: Home },
-  { href: "/user/scan", label: "Scan", icon: ScanLine, highlight: true },
-  { href: "/user/reports", label: "Reports", icon: FileText },
-  { href: "/user/products", label: "Products", icon: Package },
-  { href: "/user/settings", label: "More", icon: MoreHorizontal },
+  { href: "/consumer",          label: "Home",     icon: Home },
+  { href: "/scan",              label: "Scan",     icon: ScanLine, highlight: true },
+  { href: "/consumer/reports",  label: "Reports",  icon: FileText },
+  { href: "/consumer/products", label: "Products", icon: Package },
+  { href: "/consumer/settings", label: "More",     icon: MoreHorizontal },
 ];
 
 export default function MobileNav() {
@@ -26,7 +26,12 @@ export default function MobileNav() {
     <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-[#D9E2EC] px-2 py-2">
       <div className="flex items-center justify-around">
         {items.map((item) => {
-          const isActive = pathname === item.href;
+          const isActive =
+            pathname === item.href ||
+            (item.href !== "/consumer" &&
+              item.href !== "/scan" &&
+              pathname.startsWith(item.href + "/"));
+
           const Icon = item.icon;
           if (item.highlight) {
             return (

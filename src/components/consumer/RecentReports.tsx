@@ -2,40 +2,26 @@
 
 import { motion } from "framer-motion";
 import ReportItem from "./ReportItem";
+import type { DashboardReport } from "@/lib/consumer/get-user-dashboard";
 
 const container = {
   hidden: {},
   show: { transition: { staggerChildren: 0.06 } },
 };
 
-const reports = [
-  {
-    id: "#CR-2026-00842",
-    product: "Parle-G Biscuits (100g)",
-    date: "15 Sep 2026",
-    status: "Under Review",
-  },
-  {
-    id: "#CR-2026-00841",
-    product: "Coca-Cola (500ml)",
-    date: "12 Sep 2026",
-    status: "Verification",
-  },
-  {
-    id: "#CR-2026-00839",
-    product: "Maggi Noodles (70g)",
-    date: "10 Sep 2026",
-    status: "Resolved",
-  },
-  {
-    id: "#CR-2026-00835",
-    product: "Surf Excel (1kg)",
-    date: "5 Sep 2026",
-    status: "Closed",
-  },
-];
+function formatDate(iso: string) {
+  return new Date(iso).toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+}
 
-export default function RecentReports() {
+export default function RecentReports({
+  reports,
+}: {
+  reports: DashboardReport[];
+}) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -45,16 +31,31 @@ export default function RecentReports() {
     >
       <div className="flex items-center justify-between mb-2">
         <h2 className="text-base font-bold text-[#102A43]">My Reports</h2>
-        <button className="text-xs font-semibold text-[#1769AA] hover:underline">
+        <a
+          href="/user/reports"
+          className="text-xs font-semibold text-[#1769AA] hover:underline"
+        >
           View all →
-        </button>
+        </a>
       </div>
 
-      <motion.div variants={container} initial="hidden" animate="show">
-        {reports.map((r) => (
-          <ReportItem key={r.id} {...r} />
-        ))}
-      </motion.div>
+      {reports.length === 0 ? (
+        <div className="py-8 text-center text-sm text-[#627D98]">
+          You haven&apos;t submitted any reports yet.
+        </div>
+      ) : (
+        <motion.div variants={container} initial="hidden" animate="show">
+          {reports.map((r) => (
+            <ReportItem
+              key={r.id}
+              id={`#${r.reportCode}`}
+              product={r.productName}
+              date={formatDate(r.createdAt)}
+              status={r.status}
+            />
+          ))}
+        </motion.div>
+      )}
     </motion.div>
   );
 }

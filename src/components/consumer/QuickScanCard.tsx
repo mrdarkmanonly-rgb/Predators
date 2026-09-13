@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { Camera, Upload, Barcode, ScanLine } from "lucide-react";
+import { ScanLine } from "lucide-react";
 
 export default function QuickScanCard() {
   return (
@@ -21,7 +21,7 @@ export default function QuickScanCard() {
         </div>
       </div>
 
-      <Link href="/user/scan">
+      <Link href="/scan">
         <motion.button
           whileHover={{
             scale: 1.02,
@@ -35,27 +35,6 @@ export default function QuickScanCard() {
           Scan Product
         </motion.button>
       </Link>
-
-      <div className="grid grid-cols-3 gap-2 mt-4">
-        {[
-          { icon: Camera, label: "Use Camera" },
-          { icon: Upload, label: "Upload Images" },
-          { icon: Barcode, label: "Enter Barcode" },
-        ].map((opt, i) => (
-          <motion.button
-            key={opt.label}
-            whileHover={{ y: -2 }}
-            whileTap={{ scale: 0.97 }}
-            transition={{ type: "spring", stiffness: 400 }}
-            className="flex flex-col items-center gap-1.5 py-3 rounded-xl border border-[#D9E2EC] hover:border-[#1769AA]/40 hover:bg-[#EAF4FF]/40 transition"
-          >
-            <opt.icon className="w-4 h-4 text-[#1769AA]" />
-            <span className="text-[11px] font-medium text-[#627D98]">
-              {opt.label}
-            </span>
-          </motion.button>
-        ))}
-      </div>
     </motion.div>
   );
 }

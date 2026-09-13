@@ -16,14 +16,14 @@ import {
 } from "lucide-react";
 
 const navItems = [
-  { href: "/user", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/user/scan", label: "Scan Product", icon: ScanLine },
-  { href: "/user/scans", label: "My Scans", icon: FileSearch },
-  { href: "/user/reports", label: "My Reports", icon: FileText },
-  { href: "/user/products", label: "Products", icon: Package },
-  { href: "/user/notifications", label: "Notifications", icon: Bell },
-  { href: "/user/profile", label: "Profile", icon: User },
-  { href: "/user/settings", label: "Settings", icon: Settings },
+  { href: "/consumer",               label: "Dashboard",     icon: LayoutDashboard },
+  { href: "/scan",                   label: "Scan Product",  icon: ScanLine },
+  { href: "/consumer/scans",         label: "My Scans",      icon: FileSearch },
+  { href: "/consumer/reports",       label: "My Reports",    icon: FileText },
+  { href: "/consumer/products",      label: "Products",      icon: Package },
+  { href: "/consumer/notifications", label: "Notifications", icon: Bell },
+  { href: "/consumer/profile",       label: "Profile",       icon: User },
+  { href: "/consumer/settings",      label: "Settings",      icon: Settings },
 ];
 
 export default function Sidebar() {
@@ -42,7 +42,14 @@ export default function Sidebar() {
       {/* Nav */}
       <nav className="flex-1 space-y-1">
         {navItems.map((item) => {
-          const isActive = pathname === item.href;
+          // exact match for "/consumer" and "/scan"
+          // prefix match for nested ("/consumer/scans/*")
+          const isActive =
+            pathname === item.href ||
+            (item.href !== "/consumer" &&
+              item.href !== "/scan" &&
+              pathname.startsWith(item.href + "/"));
+
           const Icon = item.icon;
           return (
             <Link

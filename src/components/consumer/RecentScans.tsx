@@ -2,36 +2,30 @@
 
 import { motion } from "framer-motion";
 import ScanItem from "./ScanItem";
+import type { DashboardScan } from "@/lib/consumer/get-user-dashboard";
 
 const container = {
   hidden: {},
   show: { transition: { staggerChildren: 0.06 } },
 };
 
-const scans = [
-  {
-    name: "Parle-G Biscuits",
-    date: "15 Sep 2026, 10:24 AM",
-    status: "Compliant",
-  },
-  {
-    name: "Coca-Cola (500ml)",
-    date: "14 Sep 2026, 06:18 PM",
-    status: "Needs Review",
-  },
-  {
-    name: "Maggi Noodles (70g)",
-    date: "13 Sep 2026, 02:41 PM",
-    status: "Possible Issue",
-  },
-  {
-    name: "Dove Shampoo (180ml)",
-    date: "12 Sep 2026, 11:03 AM",
-    status: "Compliant",
-  },
-];
+const STATUS_LABEL: Record<DashboardScan["status"], string> = {
+  PROCESSING: "Processing",
+  COMPLETED: "Completed",
+  FAILED: "Failed",
+};
 
-export default function RecentScans() {
+function formatDate(iso: string) {
+  return new Date(iso).toLocaleString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+export default function RecentScans({ scans }: { scans: DashboardScan[] }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -41,16 +35,30 @@ export default function RecentScans() {
     >
       <div className="flex items-center justify-between mb-2">
         <h2 className="text-base font-bold text-[#102A43]">Recent Scans</h2>
-        <button className="text-xs font-semibold text-[#1769AA] hover:underline">
+        <a
+          href="/user/scans"
+          className="text-xs font-semibold text-[#1769AA] hover:underline"
+        >
           View all →
-        </button>
+        </a>
       </div>
 
-      <motion.div variants={container} initial="hidden" animate="show">
-        {scans.map((s) => (
-          <ScanItem key={s.name} {...s} />
-        ))}
-      </motion.div>
+      {scans.length === 0 ? (
+        <div className="py-8 text-center text-sm text-[#627D98]">
+          No scans yet. Scan your first product.
+        </div>
+      ) : (
+        <motion.div variants={container} initial="hidden" animate="show">
+          {scans.map((s) => (
+            <ScanItem
+              key={s.id}
+              name={s.productName}
+              date={formatDate(s.createdAt)}
+              status={STATUS_LABEL[s.status]}
+            />
+          ))}
+        </motion.div>
+      )}
     </motion.div>
   );
 }

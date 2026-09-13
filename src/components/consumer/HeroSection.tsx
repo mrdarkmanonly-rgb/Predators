@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 
-export default function HeroSection() {
+export default function HeroSection({ name }: { name: string }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 16 }}
@@ -12,14 +12,13 @@ export default function HeroSection() {
     >
       <div className="relative z-10">
         <h1 className="text-2xl md:text-3xl font-bold text-[#102A43]">
-          Welcome back, Harsika! 👋
+          Welcome back, {name}! 👋
         </h1>
         <p className="text-sm md:text-base text-[#627D98] mt-1.5">
           Scan. Check. Report. Be the Change.
         </p>
       </div>
 
-      {/* Decorative blobs */}
       <motion.div
         animate={{ scale: [1, 1.1, 1], opacity: [0.4, 0.6, 0.4] }}
         transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}

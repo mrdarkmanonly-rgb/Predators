@@ -29,7 +29,7 @@ export default function ScanPage() {
   };
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[#07111F] px-4 py-10 sm:px-6 lg:px-8">
+    <main className="relative min-h-full overflow-hidden bg-[#07111F] px-4 py-10 sm:px-6 lg:px-8">
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <motion.div
           animate={{
