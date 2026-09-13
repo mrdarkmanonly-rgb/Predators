@@ -25,7 +25,7 @@ export default async function AdminPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F7FAFC]">
+    <div className="fixed inset-0 z-50 min-h-screen overflow-y-auto bg-[#F7FAFC]">
 
       {/* Sidebar */}
       <AdminSidebar />
