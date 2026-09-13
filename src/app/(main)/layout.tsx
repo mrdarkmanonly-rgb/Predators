@@ -32,6 +32,12 @@ export default async function MainLayout({
     );
   }
 
+  // Reviewer → reviewer chrome wraps every reviewer route
+  // (page-level reviewer/layout.tsx provides the actual chrome)
+  if (user.role === "REVIEWER") {
+    return <>{children}</>;
+  }
+
   // Consumer (default)
   return (
     <div className="flex min-h-screen bg-[#F7FAFC]">
