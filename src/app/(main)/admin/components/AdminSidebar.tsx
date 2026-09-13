@@ -1,11 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   Users,
-  UserCheck,
-  UserRoundCheck,
   FileText,
   Package,
   ClipboardCheck,
@@ -16,68 +15,26 @@ import {
 } from "lucide-react";
 
 const menuItems = [
-  {
-    name: "Dashboard",
-    href: "/admin",
-    icon: LayoutDashboard,
-  },
-  {
-    name: "Users",
-    href: "/admin/users",
-    icon: Users,
-  },
-  {
-    name: "Reviewers",
-    href: "/admin/reviewers",
-    icon: UserCheck,
-  },
-  {
-    name: "Inspectors",
-    href: "/admin/inspectors",
-    icon: UserRoundCheck,
-  },
-  {
-    name: "Reports",
-    href: "/admin/reports",
-    icon: FileText,
-  },
-  {
-    name: "Products",
-    href: "/admin/products",
-    icon: Package,
-  },
-  {
-    name: "Inspections",
-    href: "/admin/inspections",
-    icon: ClipboardCheck,
-  },
-  {
-    name: "Analytics",
-    href: "/admin/analytics",
-    icon: BarChart3,
-  },
-  {
-    name: "Audit Logs",
-    href: "/admin/audit-logs",
-    icon: ScrollText,
-  },
-  {
-    name: "Settings",
-    href: "/admin/settings",
-    icon: Settings,
-  },
+  { name: "Dashboard",   href: "/admin",             icon: LayoutDashboard },
+  { name: "Users",       href: "/admin/users",       icon: Users },
+  { name: "Reports",     href: "/admin/reports",     icon: FileText },
+  { name: "Products",    href: "/admin/products",    icon: Package },
+  { name: "Inspections", href: "/admin/inspections", icon: ClipboardCheck },
+  { name: "Analytics",   href: "/admin/analytics",   icon: BarChart3 },
+  { name: "Audit Logs",  href: "/admin/audit-logs",  icon: ScrollText },
+  { name: "Settings",    href: "/admin/settings",    icon: Settings },
 ];
 
 export default function AdminSidebar() {
+  const pathname = usePathname();
+
   return (
     <aside className="fixed left-0 top-0 z-40 flex h-screen w-64 flex-col bg-[#0B1F33] text-white">
-      
       {/* Logo / Brand */}
       <div className="flex items-center gap-3 border-b border-white/10 px-6 py-5">
         <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#1769AA]">
           <ShieldCheck size={24} />
         </div>
-
         <div>
           <h1 className="text-lg font-semibold">CheckItRight</h1>
           <p className="text-xs text-slate-300">Admin Panel</p>
@@ -89,13 +46,17 @@ export default function AdminSidebar() {
         <div className="space-y-2">
           {menuItems.map((item) => {
             const Icon = item.icon;
+            const isActive =
+              item.href === "/admin"
+                ? pathname === "/admin"
+                : pathname.startsWith(item.href);
 
             return (
               <Link
                 key={item.name}
                 href={item.href}
                 className={`flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition-colors ${
-                  item.name === "Dashboard"
+                  isActive
                     ? "bg-[#1769AA] text-white"
                     : "text-slate-300 hover:bg-white/10 hover:text-white"
                 }`}
@@ -114,7 +75,6 @@ export default function AdminSidebar() {
           <ShieldCheck size={18} className="text-blue-300" />
           <span className="text-sm font-medium">Fair Markets</span>
         </div>
-
         <p className="text-xs leading-5 text-slate-300">
           Stronger Consumers
           <br />

@@ -1,7 +1,7 @@
 import "server-only";
 
 import prisma from "@/utils/prisma.client";
-import { getCurrentUser } from "@/lib/auth-guard";
+import { requireRole } from "@/lib/auth-guard";
 import { reportStatusLabel } from "./report-status";
 
 export type DashboardScan = {
@@ -35,9 +35,8 @@ export type DashboardData = {
 
 const RECENT_LIMIT = 4;
 
-export async function getUserDashboard(): Promise<DashboardData | null> {
-  const user = await getCurrentUser();
-  if (!user) return null;
+export async function getUserDashboard(): Promise<DashboardData> {
+  const user = await requireRole(["CONSUMER", "ADMIN"]);
 
   const userId = user.id;
 

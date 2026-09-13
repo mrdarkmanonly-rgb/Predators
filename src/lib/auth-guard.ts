@@ -11,13 +11,15 @@ export async function requireRole(allowedRoles: UserRole[]) {
   }
 
   const user = await prisma.user.findUnique({
-    where: {
-      clerkUserId: userId,
-    },
+    where: { clerkUserId: userId },
   });
 
   if (!user) {
     redirect("/login");
+  }
+
+  if (user.status === "INACTIVE") {
+    redirect("/account-inactive");
   }
 
   if (!allowedRoles.includes(user.role)) {
@@ -34,6 +36,10 @@ export async function getCurrentUser() {
   const user = await prisma.user.findUnique({
     where: { clerkUserId: userId },
   });
+
+  if (user && user.status === "INACTIVE") {
+    redirect("/account-inactive");
+  }
 
   return user;
 }

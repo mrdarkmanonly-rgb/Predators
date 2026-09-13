@@ -3,8 +3,8 @@ import { LucideIcon } from "lucide-react";
 interface StatCardProps {
   title: string;
   value: string;
-  change: string;
-  subtitle: string;
+  change?: string;
+  subtitle?: string;
   icon: LucideIcon;
   iconBg: string;
   iconColor: string;
@@ -21,6 +21,8 @@ export default function StatCard({
   iconColor,
   positive = true,
 }: StatCardProps) {
+  const showDelta = change || subtitle;
+
   return (
     <div className="rounded-xl border border-[#D9E2EC] bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
       <div className="flex items-start justify-between">
@@ -33,19 +35,24 @@ export default function StatCard({
             {value}
           </h2>
 
-          <div className="mt-2 flex items-center gap-2">
-            <span
-              className={`text-xs font-semibold ${
-                positive ? "text-[#16A34A]" : "text-[#DC2626]"
-              }`}
-            >
-              {change}
-            </span>
-
-            <span className="text-xs text-[#829AB1]">
-              {subtitle}
-            </span>
-          </div>
+          {showDelta && (
+            <div className="mt-2 flex items-center gap-2">
+              {change && (
+                <span
+                  className={`text-xs font-semibold ${
+                    positive ? "text-[#16A34A]" : "text-[#DC2626]"
+                  }`}
+                >
+                  {change}
+                </span>
+              )}
+              {subtitle && (
+                <span className="text-xs text-[#829AB1]">
+                  {subtitle}
+                </span>
+              )}
+            </div>
+          )}
         </div>
 
         <div

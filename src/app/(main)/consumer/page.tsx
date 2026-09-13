@@ -1,4 +1,3 @@
-import { redirect } from "next/navigation";
 import PageTransition from "@/components/consumer/PageTransition";
 import HeroSection from "@/components/consumer/HeroSection";
 import StatsGrid from "@/components/consumer/StatsGrid";
@@ -9,8 +8,6 @@ import { getUserDashboard } from "@/lib/consumer/get-user-dashboard";
 
 export default async function UserDashboardPage() {
   const data = await getUserDashboard();
-
-  if (!data) redirect("/login");
 
   return (
     <PageTransition>
