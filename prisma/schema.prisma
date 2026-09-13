@@ -195,43 +195,36 @@ model ScanImage {
 
 model CitizenReport {
   id String @id @default(cuid())
-
   reportCode String @unique
-
   submittedById String
-
   productId String?
-  scanId    String?
-
+  scanId String?
   status ReportStatus @default(SUBMITTED)
-
-  issueType   String?
+  issueType String?
   description String? @db.Text
 
   locationText String?
-
-  latitude  Float?
+  shopName String?
+  shopAddress String?
+  city String?
+  state String?
+  pincode String?
+  latitude Float?
   longitude Float?
 
   reviewedById String?
-  reviewedAt   DateTime?
-
-  resolutionRemarks String?   @db.Text
-  resolvedAt        DateTime?
-
+  reviewedAt DateTime?
+  resolutionRemarks String? @db.Text
+  resolvedAt DateTime?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   submittedBy User @relation(fields: [submittedById], references: [id], onDelete: Cascade)
-
   product Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
-
   scan Scan? @relation(fields: [scanId], references: [id], onDelete: SetNull)
-
   reviewedBy User? @relation("ReportReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
-
-  evidence   ReportEvidence[]
-  inspection Inspection? // ← NEW
+  evidence ReportEvidence[]
+  inspection Inspection?
 
   @@index([submittedById])
   @@index([productId])

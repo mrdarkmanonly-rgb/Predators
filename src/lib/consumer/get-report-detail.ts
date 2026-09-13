@@ -23,22 +23,35 @@ export type ReportDetail = {
   id: string;
   reportCode: string;
   status: string;
-  statusRaw: "SUBMITTED" | "FORWARDED_TO_INSPECTOR" | "REJECTED" | "RESOLVED";
+  statusRaw:
+    | "SUBMITTED"
+    | "FORWARDED_TO_INSPECTOR"
+    | "REJECTED"
+    | "RESOLVED";
   issueType: string | null;
   description: string | null;
+
   locationText: string | null;
+  shopName: string | null;
+  shopAddress: string | null;
+  city: string | null;
+  state: string | null;
+  pincode: string | null;
   latitude: number | null;
   longitude: number | null;
+
   resolutionRemarks: string | null;
   createdAt: string;
   reviewedAt: string | null;
   resolvedAt: string | null;
+
   product: {
     id: string;
     productName: string | null;
     brandName: string | null;
     category: string | null;
   } | null;
+
   scan: {
     id: string;
     ocrConfidence: number | null;
@@ -46,6 +59,7 @@ export type ReportDetail = {
     ocrVersion: string | null;
     rawOcrText: string | null;
   } | null;
+
   evidence: ReportEvidence[];
   timeline: ReportTimelineEvent[];
 };
@@ -54,7 +68,10 @@ export async function getReportDetail(
   reportId: string,
 ): Promise<ReportDetail | null> {
   const user = await getCurrentUser();
-  if (!user) return null;
+
+  if (!user) {
+    return null;
+  }
 
   const report = await prisma.citizenReport.findFirst({
     where: {
@@ -65,16 +82,25 @@ export async function getReportDetail(
       id: true,
       reportCode: true,
       status: true,
+
       issueType: true,
       description: true,
+
       locationText: true,
+      shopName: true,
+      shopAddress: true,
+      city: true,
+      state: true,
+      pincode: true,
       latitude: true,
       longitude: true,
+
       resolutionRemarks: true,
       createdAt: true,
       updatedAt: true,
       reviewedAt: true,
       resolvedAt: true,
+
       product: {
         select: {
           id: true,
@@ -83,6 +109,7 @@ export async function getReportDetail(
           category: true,
         },
       },
+
       scan: {
         select: {
           id: true,
@@ -90,8 +117,11 @@ export async function getReportDetail(
           ocrEngine: true,
           ocrVersion: true,
           rawOcrText: true,
+
           images: {
-            orderBy: { createdAt: "asc" },
+            orderBy: {
+              createdAt: "asc",
+            },
             select: {
               id: true,
               secureUrl: true,
@@ -105,9 +135,10 @@ export async function getReportDetail(
     },
   });
 
-  if (!report) return null;
+  if (!report) {
+    return null;
+  }
 
-  // ── FIXED: use report.status everywhere below, not report.statusRaw ──
   const timeline: ReportTimelineEvent[] = [
     {
       label: "Submitted",
@@ -117,7 +148,10 @@ export async function getReportDetail(
     },
   ];
 
-  if (report.status !== "SUBMITTED" && report.reviewedAt) {
+  if (
+    report.status !== "SUBMITTED" &&
+    report.reviewedAt
+  ) {
     timeline.push({
       label: "Under review",
       occurredAt: report.reviewedAt.toISOString(),
@@ -126,7 +160,10 @@ export async function getReportDetail(
     });
   }
 
-  const terminalAt = report.resolvedAt ?? report.reviewedAt ?? report.updatedAt;
+  const terminalAt =
+    report.resolvedAt ??
+    report.reviewedAt ??
+    report.updatedAt;
 
   if (report.status === "FORWARDED_TO_INSPECTOR") {
     timeline.push({
@@ -154,28 +191,47 @@ export async function getReportDetail(
   return {
     id: report.id,
     reportCode: report.reportCode,
+
     status: reportStatusLabel(report.status),
     statusRaw: report.status,
+
     issueType: report.issueType,
     description: report.description,
+
     locationText: report.locationText,
+    shopName: report.shopName,
+    shopAddress: report.shopAddress,
+    city: report.city,
+    state: report.state,
+    pincode: report.pincode,
     latitude: report.latitude,
     longitude: report.longitude,
+
     resolutionRemarks: report.resolutionRemarks,
+
     createdAt: report.createdAt.toISOString(),
-    reviewedAt: report.reviewedAt?.toISOString() ?? null,
-    resolvedAt: report.resolvedAt?.toISOString() ?? null,
+
+    reviewedAt:
+      report.reviewedAt?.toISOString() ?? null,
+
+    resolvedAt:
+      report.resolvedAt?.toISOString() ?? null,
+
     product: report.product,
+
     scan: report.scan
       ? {
           id: report.scan.id,
-          ocrConfidence: report.scan.ocrConfidence,
+          ocrConfidence:
+            report.scan.ocrConfidence,
           ocrEngine: report.scan.ocrEngine,
           ocrVersion: report.scan.ocrVersion,
           rawOcrText: report.scan.rawOcrText,
         }
       : null,
+
     evidence: report.scan?.images ?? [],
+
     timeline,
   };
 }
