@@ -57,6 +57,7 @@ model User {
   scans            Scan[]
   submittedReports CitizenReport[]
   reviewedReports  CitizenReport[] @relation("ReportReviewer")
+  inspections      Inspection[]    @relation("InspectorCases") // ← NEW
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -77,7 +78,7 @@ model RoleChangeLog {
 
   createdAt DateTime @default(now())
 
-  user User @relation("TargetUser", fields: [userId], references: [id], onDelete: Cascade)
+  user      User @relation("TargetUser", fields: [userId], references: [id], onDelete: Cascade)
   changedBy User @relation("ChangedBy", fields: [changedById], references: [id], onDelete: Restrict)
 
   @@index([userId])
@@ -215,7 +216,7 @@ model CitizenReport {
   reviewedById String?
   reviewedAt   DateTime?
 
-  resolutionRemarks String? @db.Text
+  resolutionRemarks String?   @db.Text
   resolvedAt        DateTime?
 
   createdAt DateTime @default(now())
@@ -229,7 +230,8 @@ model CitizenReport {
 
   reviewedBy User? @relation("ReportReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
 
-  evidence ReportEvidence[]
+  evidence   ReportEvidence[]
+  inspection Inspection? // ← NEW
 
   @@index([submittedById])
   @@index([productId])
@@ -258,4 +260,41 @@ model ReportEvidence {
 
   @@index([reportId])
   @@index([createdAt])
+}
+
+// ─────────────────────────────────────────────────────────────
+// INSPECTION — new table for inspector claim + field findings
+// ─────────────────────────────────────────────────────────────
+model Inspection {
+  id String @id @default(cuid())
+
+  reportId    String @unique
+  inspectorId String
+
+  claimedAt   DateTime  @default(now())
+  completedAt DateTime?
+
+  // Findings (Step 4)
+  violationFound Boolean?
+  violationType  String?
+  observation    String?  @db.Text
+
+  // Action (Step 5)
+  actionType       String?
+  actionDetails    String?   @db.Text
+  actionDate       DateTime?
+  followUpRequired Boolean?
+
+  // Final mandatory remark
+  remarks String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  report    CitizenReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  inspector User          @relation("InspectorCases", fields: [inspectorId], references: [id], onDelete: Restrict)
+
+  @@index([inspectorId])
+  @@index([claimedAt])
+  @@index([completedAt])
 }

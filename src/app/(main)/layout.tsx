@@ -2,6 +2,7 @@ import { getCurrentUser } from "@/lib/auth-guard";
 import ConsumerSidebar from "@/components/consumer/Sidebar";
 import ConsumerMobileNav from "@/components/consumer/MobileNav";
 import ConsumerHeader from "@/components/consumer/Heaser";
+import InspectorShell from "@/app/(main)/inspector/components/InspectorShell";
 
 export default async function MainLayout({
   children,
@@ -15,12 +16,23 @@ export default async function MainLayout({
     return <main className="min-h-screen bg-[#07111F]">{children}</main>;
   }
 
-  // Inspector → inspector page owns its own chrome (leave as-is for now)
+  // Inspector → inspector chrome wraps every inspector route (incl. /scan)
   if (user.role === "INSPECTOR") {
-    return <>{children}</>;
+    return (
+      <InspectorShell
+        user={{
+          name: user.name ?? user.email.split("@")[0],
+          email: user.email,
+          role: user.role,
+          imageUrl: user.imageUrl,
+        }}
+      >
+        {children}
+      </InspectorShell>
+    );
   }
 
-  // Consumer (default) → consumer sidebar + header + mobile nav
+  // Consumer (default)
   return (
     <div className="flex min-h-screen bg-[#F7FAFC]">
       <ConsumerSidebar />

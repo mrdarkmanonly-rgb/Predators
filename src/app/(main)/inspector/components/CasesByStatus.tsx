@@ -1,20 +1,29 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { CASES_BY_STATUS } from "./data";
 
-export default function CasesByStatus() {
-  const { total, segments } = CASES_BY_STATUS;
+type Segment = {
+  label: string;
+  value: number;
+  color: string;
+};
 
-  // Build SVG donut
+export default function CasesByStatus({
+  segments,
+  total,
+}: {
+  segments: Segment[];
+  total: number;
+}) {
   const size = 140;
   const stroke = 16;
   const radius = (size - stroke) / 2;
   const circumference = 2 * Math.PI * radius;
 
+  const safeTotal = total > 0 ? total : 1;
   let offset = 0;
   const arcs = segments.map((seg) => {
-    const fraction = seg.value / total;
+    const fraction = seg.value / safeTotal;
     const dash = fraction * circumference;
     const arc = { ...seg, dash, offset };
     offset += dash;
@@ -36,7 +45,6 @@ export default function CasesByStatus() {
       </CardHeader>
 
       <CardContent className="flex flex-col items-center gap-4 sm:flex-row">
-        {/* Donut */}
         <div className="relative shrink-0">
           <svg width={size} height={size} className="-rotate-90">
             <circle
@@ -47,20 +55,21 @@ export default function CasesByStatus() {
               stroke="#EAF4FF"
               strokeWidth={stroke}
             />
-            {arcs.map((arc, i) => (
-              <circle
-                key={i}
-                cx={size / 2}
-                cy={size / 2}
-                r={radius}
-                fill="none"
-                stroke={arc.color}
-                strokeWidth={stroke}
-                strokeDasharray={`${arc.dash} ${circumference - arc.dash}`}
-                strokeDashoffset={-arc.offset}
-                strokeLinecap="butt"
-              />
-            ))}
+            {total > 0 &&
+              arcs.map((arc, i) => (
+                <circle
+                  key={i}
+                  cx={size / 2}
+                  cy={size / 2}
+                  r={radius}
+                  fill="none"
+                  stroke={arc.color}
+                  strokeWidth={stroke}
+                  strokeDasharray={`${arc.dash} ${circumference - arc.dash}`}
+                  strokeDashoffset={-arc.offset}
+                  strokeLinecap="butt"
+                />
+              ))}
           </svg>
 
           <div className="absolute inset-0 flex flex-col items-center justify-center">
@@ -71,7 +80,6 @@ export default function CasesByStatus() {
           </div>
         </div>
 
-        {/* Legend */}
         <ul className="flex w-full flex-col gap-2">
           {segments.map((seg) => (
             <li key={seg.label} className="flex items-center gap-2 text-xs">

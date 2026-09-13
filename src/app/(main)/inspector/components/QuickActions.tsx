@@ -1,39 +1,52 @@
 "use client";
 
 import Link from "next/link";
-import { ScanLine, ClipboardList, History, MapPin } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ScanLine, ClipboardList, History } from "lucide-react";
 
 const ACTIONS = [
-  { id: "scan", label: "Scan Product", hint: "Scan and verify product on-site", href: "/inspector/scan", Icon: ScanLine },
-  { id: "cases", label: "My Assigned Cases", hint: "View and manage your cases", href: "/inspector/cases/assigned", Icon: ClipboardList },
-  { id: "history", label: "Inspection History", hint: "View completed inspections", href: "/inspector/history", Icon: History },
-  { id: "nearby", label: "Nearby Cases", hint: "Find cases in your area", href: "/inspector/cases/assigned", Icon: MapPin },
+  {
+    href: "/scan",
+    label: "Scan Product",
+    hint: "Scan and verify product on-site",
+    Icon: ScanLine,
+  },
+  {
+    href: "/inspector/available",
+    label: "Available Cases",
+    hint: "View and claim forwarded cases",
+    Icon: ClipboardList,
+  },
+  {
+    href: "/inspector/history",
+    label: "Inspection History",
+    hint: "View completed inspections",
+    Icon: History,
+  },
 ];
 
 export default function QuickActions() {
   return (
-    <Card className="h-full">
-      <CardHeader className="space-y-0">
+    <Card>
+      <CardHeader className="flex-row items-center justify-between space-y-0">
         <CardTitle className="text-sm font-semibold text-[#102A43]">
           Quick Actions
         </CardTitle>
       </CardHeader>
-
-      <CardContent className="grid grid-cols-2 gap-2.5">
-        {ACTIONS.map(({ id, label, hint, href, Icon }) => (
+      <CardContent className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        {ACTIONS.map(({ href, label, hint, Icon }) => (
           <Link
-            key={id}
+            key={href}
             href={href}
-            className="group flex flex-col gap-1.5 rounded-xl border border-[#D9E2EC] bg-[#F7FAFC] p-3 transition-all hover:-translate-y-0.5 hover:border-[#1769AA]/30 hover:bg-[#EAF4FF] hover:shadow-[0_6px_18px_rgba(23,105,170,0.08)]"
+            className="group flex items-start gap-3 rounded-xl border border-[#D9E2EC] p-4 transition hover:border-[#1769AA]/40 hover:bg-[#EAF4FF]/40"
           >
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-white text-[#1769AA] shadow-sm transition-colors group-hover:bg-[#1769AA] group-hover:text-white">
-              <Icon className="h-4 w-4" />
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#EAF4FF]">
+              <Icon className="h-4 w-4 text-[#1769AA]" />
             </span>
-            <span className="text-xs font-semibold text-[#102A43]">{label}</span>
-            <span className="text-[10px] leading-tight text-[#627D98]">
-              {hint}
-            </span>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-[#102A43]">{label}</p>
+              <p className="mt-0.5 text-[11px] text-[#627D98]">{hint}</p>
+            </div>
           </Link>
         ))}
       </CardContent>

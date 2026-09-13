@@ -9,7 +9,17 @@ import {
   Package,
   Scale,
 } from "lucide-react";
-import { EXTRACTED_FIELDS } from "./data";
+
+// Preview data — this component is a visual reference strip.
+// Real data lives in the inspection workspace (Phase 6).
+const EXTRACTED_FIELDS = [
+  { label: "Product Name", value: "Parle-G Biscuits" },
+  { label: "Net Quantity", value: "100 g" },
+  { label: "MRP", value: "₹ 10.00" },
+  { label: "Manufacturer", value: "Parle Products Pvt. Ltd." },
+  { label: "Batch No.", value: "PKD12345" },
+  { label: "Mfg. Date", value: "12/2025" },
+];
 
 export default function InspectionWorkflowStrip() {
   return (
@@ -18,7 +28,6 @@ export default function InspectionWorkflowStrip() {
       <div className="flex flex-col gap-3 rounded-xl border border-[#D9E2EC] bg-white p-4">
         <StepHeader n={1} title="Scan Product" hint="Capture product images on-site" />
 
-        {/* Product preview placeholder (no image file needed) */}
         <div className="relative flex aspect-square items-center justify-center overflow-hidden rounded-lg bg-[#0B1F33]">
           <div className="flex flex-col items-center gap-2 text-white/40">
             <Package className="h-10 w-10" strokeWidth={1.5} />
@@ -54,7 +63,6 @@ export default function InspectionWorkflowStrip() {
         <StepHeader n={2} title="AI Extraction" hint="Automatic OCR and data extraction" />
 
         <div className="flex items-center gap-2 rounded-lg border border-[#D9E2EC] bg-[#F7FAFC] p-2">
-          {/* Thumbnail placeholder */}
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-[#EAF4FF]">
             <Package className="h-5 w-5 text-[#1769AA]" />
           </div>
@@ -177,11 +185,9 @@ export default function InspectionWorkflowStrip() {
             Upload Evidence
           </label>
           <div className="flex items-center gap-2">
-            {/* Weighing evidence placeholder */}
             <div className="flex h-12 w-12 items-center justify-center rounded-lg border border-[#D9E2EC] bg-[#F7FAFC]">
               <Scale className="h-5 w-5 text-[#627D98]" />
             </div>
-            {/* Product evidence placeholder */}
             <div className="flex h-12 w-12 items-center justify-center rounded-lg border border-[#D9E2EC] bg-[#F7FAFC]">
               <Package className="h-5 w-5 text-[#627D98]" />
             </div>
