@@ -3,6 +3,7 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
+import { useRouter } from "next/navigation";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -21,6 +22,9 @@ import {
   Phone,
   Mail,
   ExternalLink,
+  RotateCcw,
+  LayoutDashboard,
+  Flag,
 } from "lucide-react";
 
 type RuleResult = {
@@ -188,11 +192,13 @@ const sectionVariants = {
 export default function ScanResult({
   scan,
 }: Props) {
+  const router = useRouter();
+
   const fields =
-    scan.extractedData ?? {};
+    scan?.extractedData ?? {};
 
   const compliance =
-    (scan.analysisResult ??
+    (scan?.analysisResult ??
       {}) as ComplianceResult;
 
   const rules =
@@ -495,7 +501,7 @@ export default function ScanResult({
                 </div>
               </div>
 
-              {scan.productId && (
+              {scan?.productId && (
                 <Link
                   href={`/product/${scan.productId}`}
                   className="group relative mt-5 inline-flex items-center gap-2 overflow-hidden rounded-xl border border-[#4ADE80]/20 bg-[#16A34A]/10 px-4 py-2.5 text-sm font-bold text-[#4ADE80] transition hover:border-[#4ADE80]/40 hover:bg-[#16A34A]/20"
@@ -1082,7 +1088,7 @@ export default function ScanResult({
         </div>
       </motion.div>
 
-      {scan.preprocessingImages &&
+      {scan?.preprocessingImages &&
         scan.preprocessingImages.length > 0 && (
           <motion.div
             variants={sectionVariants}
@@ -1306,7 +1312,7 @@ export default function ScanResult({
             </div>
 
             <p className="mt-2 text-sm font-bold text-slate-200">
-              {scan.ocrEngine ??
+              {scan?.ocrEngine ??
                 "Not available"}
             </p>
           </div>
@@ -1320,10 +1326,10 @@ export default function ScanResult({
             </div>
 
             <p className="mt-2 text-sm font-bold text-slate-200">
-              {scan.ocrConfidence !==
+              {scan?.ocrConfidence !==
               null
                 ? `${(
-                    scan.ocrConfidence *
+                    scan?.ocrConfidence *
                     100
                   ).toFixed(2)}%`
                 : "Not available"}
@@ -1339,7 +1345,7 @@ export default function ScanResult({
             </div>
 
             <p className="mt-2 text-sm font-bold text-slate-200">
-              {scan.images.length}
+              {scan?.images.length}
             </p>
           </div>
         </div>
@@ -1350,7 +1356,7 @@ export default function ScanResult({
           </summary>
 
           <pre className="max-h-[600px] overflow-auto whitespace-pre-wrap bg-[#050C16] p-5 text-xs leading-6 text-slate-500">
-            {scan.rawOcrText ||
+            {scan?.rawOcrText ||
               "No OCR text available."}
           </pre>
         </details>
@@ -1379,6 +1385,63 @@ export default function ScanResult({
             {compliance.disclaimer ??
               "This result is an AI-assisted compliance screening and does not constitute a final legal determination."}
           </p>
+        </div>
+      </motion.div>
+
+      <motion.div
+        variants={sectionVariants}
+        className="rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-sm sm:p-6"
+      >
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h3 className="text-lg font-black text-slate-900">
+              What would you like to do?
+            </h3>
+            <p className="mt-1 text-sm text-slate-500">
+              Continue with this scan or start a new product scan.
+            </p>
+          </div>
+
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <button
+              type="button"
+              onClick={() =>
+                router.push(
+                  `/report?scanId=${encodeURIComponent(
+                    scan.id,
+                  )}${
+                    scan.productId
+                      ? `&productId=${encodeURIComponent(
+                          scan.productId,
+                        )}`
+                      : ""
+                  }`,
+                )
+              }
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-red-600 px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-red-700 active:scale-[0.98]"
+            >
+              <Flag className="h-4 w-4" />
+              Report Issue
+            </button>
+
+            <button
+              type="button"
+              onClick={() => router.push("/scan")}
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-700 transition hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-700 active:scale-[0.98]"
+            >
+              <RotateCcw className="h-4 w-4" />
+              Rescan
+            </button>
+
+            <button
+              type="button"
+              onClick={() => router.push("/dashboard")}
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-5 py-3 text-sm font-bold text-white transition hover:bg-slate-800 active:scale-[0.98]"
+            >
+              <LayoutDashboard className="h-4 w-4" />
+              Done
+            </button>
+          </div>
         </div>
       </motion.div>
     </motion.section>

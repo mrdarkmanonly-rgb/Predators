@@ -40,9 +40,13 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 .data/
+<<<<<<< Updated upstream
 
 # Python
 __pycache__/
 *.py[cod]
 .venv/
 venv/
+=======
+.clerk/
+>>>>>>> Stashed changes

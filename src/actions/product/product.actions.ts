@@ -952,3 +952,77 @@ export async function linkScanToProduct(
     };
   }
 }
+
+export async function getScanById(scanId: string) {
+  try {
+    const { userId } = await auth();
+
+    if (!userId) {
+      return {
+        success: false,
+        message: "User is not authenticated",
+      };
+    }
+
+    if (!scanId?.trim()) {
+      return {
+        success: false,
+        message: "Scan ID is required.",
+      };
+    }
+
+    const user = await prisma.user.findUnique({
+      where: {
+        clerkUserId: userId,
+      },
+      select: {
+        id: true,
+        role: true,
+      },
+    });
+
+    if (!user) {
+      return {
+        success: false,
+        message: "User not found.",
+      };
+    }
+
+    const scan = await prisma.scan.findUnique({
+      where: {
+        id: scanId,
+      },
+      include: {
+        product: true,
+        images: true,
+      },
+    });
+
+    if (!scan) {
+      return {
+        success: false,
+        message: "Scan not found.",
+      };
+    }
+
+    if (scan.userId !== user.id) {
+      return {
+        success: false,
+        message: "You are not allowed to access this scan.",
+      };
+    }
+
+    return {
+      success: true,
+      scan: serializeScan(scan),
+      message: "Scan fetched successfully.",
+    };
+  } catch (error) {
+    console.error("GET SCAN BY ID ERROR:", error);
+
+    return {
+      success: false,
+      message: "Failed to fetch scan.",
+    };
+  }
+}

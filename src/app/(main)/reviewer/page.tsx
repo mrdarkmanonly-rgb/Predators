@@ -1,13 +1,13 @@
-import LogoutButton from "@/components/global/logout-button";
-import { requireRole } from "@/lib/auth-guard";
+import ReviewerDashboard from "./components/ReviewerDashboard";
+import "./reviewer.css";
 
-export default async function ReviewerPage () {
-  const user = await requireRole(["REVIEWER"]);
+export default function ReviewerPage() {
   return (
-    <main>
-      <h1>Reviewer Dashboard</h1>
-      <p>Reviewer dashboard coming soon.</p>
-      <LogoutButton />
-    </main>
+    <ReviewerDashboard
+      user={{
+        name: "Reviewer",
+        email: "reviewer@checkitright.com",
+      }}
+    />
   );
 }
