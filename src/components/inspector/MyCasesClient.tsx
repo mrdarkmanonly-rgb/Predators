@@ -78,7 +78,6 @@ export default function MyCasesClient({ cases }: { cases: MyCase[] }) {
 
   return (
     <div className="mx-auto max-w-4xl space-y-4">
-      {/* Header */}
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-bold text-[#102A43]">My Cases</h1>
@@ -91,7 +90,6 @@ export default function MyCasesClient({ cases }: { cases: MyCase[] }) {
         </span>
       </div>
 
-      {/* Toolbar */}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#627D98]" />
@@ -147,7 +145,6 @@ export default function MyCasesClient({ cases }: { cases: MyCase[] }) {
         </div>
       </div>
 
-      {/* Results */}
       {cases.length === 0 ? (
         <div className="bg-white rounded-2xl border border-[#D9E2EC] p-12 text-center">
           <p className="text-sm text-[#627D98]">
@@ -206,10 +203,10 @@ export default function MyCasesClient({ cases }: { cases: MyCase[] }) {
               </div>
 
               <Link
-                href={`/inspector/cases/${c.inspectionId}`}
+                href={`/inspector/inspections/${c.inspectionId}`}
                 className="shrink-0 inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-xl bg-[#1769AA] text-white hover:bg-[#135a92] transition"
               >
-                Open Inspection
+                View Details
                 <ArrowRight className="w-4 h-4" />
               </Link>
             </motion.div>

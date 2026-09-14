@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, ChevronDown, MapPin, AlertCircle, Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -217,53 +218,62 @@ export default function AvailableCasesClient({
             {filtered.map((c) => {
               const isClaiming = claimingId === c.reportId;
               return (
-                <motion.div
+                <Link
                   key={c.reportId}
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, x: 20 }}
-                  transition={{ duration: 0.2 }}
-                  className="bg-white rounded-2xl border border-[#D9E2EC] p-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+                  href={`/inspector/cases/${c.reportId}`}
+                  className="block"
                 >
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs font-mono text-[#627D98]">
-                      #{c.reportCode}
-                    </p>
-                    <p className="text-sm font-semibold text-[#102A43] mt-1 truncate">
-                      {c.productName}
-                    </p>
-                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5 text-xs text-[#627D98]">
-                      {c.issueType && (
-                        <span className="inline-flex items-center gap-1">
-                          <AlertCircle className="w-3 h-3" />
-                          {c.issueType}
-                        </span>
-                      )}
-                      {c.locationText && (
-                        <span className="inline-flex items-center gap-1">
-                          <MapPin className="w-3 h-3" />
-                          {c.locationText}
-                        </span>
-                      )}
-                      <span>Forwarded {relativeTime(c.forwardedAt)}</span>
-                    </div>
-                  </div>
-
-                  <button
-                    onClick={() => takeCase(c.reportId)}
-                    disabled={isClaiming || pending}
-                    className="shrink-0 inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-xl bg-[#1769AA] text-white hover:bg-[#135a92] transition disabled:opacity-60 disabled:cursor-not-allowed"
+                  <motion.div
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, x: 20 }}
+                    transition={{ duration: 0.2 }}
+                    className="bg-white rounded-2xl border border-[#D9E2EC] p-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between transition hover:border-[#1769AA]/40"
                   >
-                    {isClaiming ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        Claiming…
-                      </>
-                    ) : (
-                      "Take Case"
-                    )}
-                  </button>
-                </motion.div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-mono text-[#627D98]">
+                        #{c.reportCode}
+                      </p>
+                      <p className="text-sm font-semibold text-[#102A43] mt-1 truncate">
+                        {c.productName}
+                      </p>
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5 text-xs text-[#627D98]">
+                        {c.issueType && (
+                          <span className="inline-flex items-center gap-1">
+                            <AlertCircle className="w-3 h-3" />
+                            {c.issueType}
+                          </span>
+                        )}
+                        {c.locationText && (
+                          <span className="inline-flex items-center gap-1">
+                            <MapPin className="w-3 h-3" />
+                            {c.locationText}
+                          </span>
+                        )}
+                        <span>Forwarded {relativeTime(c.forwardedAt)}</span>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        takeCase(c.reportId);
+                      }}
+                      disabled={isClaiming || pending}
+                      className="shrink-0 inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-xl bg-[#1769AA] text-white hover:bg-[#135a92] transition disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                      {isClaiming ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Claiming…
+                        </>
+                      ) : (
+                        "Take Case"
+                      )}
+                    </button>
+                  </motion.div>
+                </Link>
               );
             })}
           </AnimatePresence>
